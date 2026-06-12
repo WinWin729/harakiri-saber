@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハラキリセイバー — 試作之伍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sumi:#15110d; --sumi2:#211b15;
+    --washi:#e6d9bf; --washi-dim:#9a8d74;
+    --hi:#c3272b; --hi-bright:#e8453c;
+    --kane:#c79a3e; --tetsu:#46403a; --line:#3a332b;
+    --tagiri:#3e8f7a; --heal:#8fd07a; --mikiri:#9fd8e8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--sumi);
+    background-image:radial-gradient(ellipse at 50% -20%, #2a2118 0%, var(--sumi) 60%);
+    color:var(--washi);
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    overflow-x:hidden; min-height:100%;
+  }
+  #app{max-width:760px;margin:0 auto;padding:10px 12px 18px;position:relative;
+       transition:filter .8s, transform .6s;transform-origin:50% 40%;}
+  /* 死地アドレナリン / 覚悟最大の昂ぶり */
+  body.adre1 #app{transform:scale(1.012);filter:saturate(1.15) contrast(1.02);}
+  body.adre2 #app{transform:scale(1.022);filter:saturate(1.3) contrast(1.06);}
+  #furyEdge{
+    position:fixed;inset:0;pointer-events:none;z-index:86;opacity:0;transition:opacity .6s;
+    box-shadow:inset 0 0 90px 26px rgba(199,154,62,.45);
+  }
+  body.adre2 #furyEdge{opacity:1;animation:furyPulse .9s ease-in-out infinite;}
+  @keyframes furyPulse{
+    0%,100%{box-shadow:inset 0 0 80px 22px rgba(199,154,62,.35);}
+    50%{box-shadow:inset 0 0 120px 40px rgba(214,170,70,.6);}
+  }
+
+  /* 本物のヒットストップ */
+  .hitstop *{animation-play-state:paused !important;}
+
+  #dimEdges{
+    position:fixed;inset:0;pointer-events:none;z-index:87;opacity:0;transition:opacity .8s;
+    backdrop-filter:blur(2px) saturate(.75);
+    -webkit-backdrop-filter:blur(2px) saturate(.75);
+    mask-image:radial-gradient(ellipse 100% 120% at 50% 80%, transparent 68%, #000 96%);
+    -webkit-mask-image:radial-gradient(ellipse 100% 120% at 50% 80%, transparent 68%, #000 96%);
+  }
+  #dimEdges.low{opacity:1;}
+
+  .hpThreat{
+    position:absolute;top:0;height:100%;z-index:2;pointer-events:none;
+    background:rgba(232,69,60,.6);border-radius:2px;
+    animation:threatBlink 1s ease-in-out infinite;
+  }
+  .hpThreat.lethal{background:rgba(255,45,40,.8);animation:threatBlink .4s steps(2,end) infinite;}
+  @keyframes threatBlink{0%,100%{opacity:.12;}50%{opacity:.85;}}
+
+  .hpFill.player{overflow:visible;}
+  .hpFill.player.hurtSeq{transition:width 1.4s cubic-bezier(.3,.65,.35,1) .55s;}
+  .hpFill.player.hurtSeq::after{
+    content:"";position:absolute;inset:0;background:#ff3b30;border-radius:2px;
+    animation:redBlink .16s steps(2,end) 5;opacity:0;
+  }
+  @keyframes redBlink{0%{opacity:1;}100%{opacity:0;}}
+
+  #bloodflash{
+    position:fixed;inset:0;pointer-events:none;z-index:90;
+    background:radial-gradient(ellipse at 50% 100%, rgba(195,39,43,.55), transparent 70%);
+    opacity:0;transition:opacity .5s;
+  }
+  #bloodflash.on{opacity:1;transition:opacity .05s;}
+  #goldflash{
+    position:fixed;inset:0;pointer-events:none;z-index:92;
+    background:radial-gradient(ellipse at 50% 40%, rgba(199,154,62,.5), transparent 70%);
+    opacity:0;transition:opacity .8s;
+  }
+  #goldflash.on{opacity:1;transition:opacity .05s;}
+  #killflash{
+    position:fixed;inset:0;pointer-events:none;z-index:98;
+    background:#f5ead2;opacity:0;
+  }
+  #killflash.on{animation:killWhite .9s ease-out forwards;}
+  @keyframes killWhite{0%{opacity:0;}8%{opacity:1;}100%{opacity:0;}}
+  #zan{
+    position:fixed;left:0;right:0;top:30%;z-index:99;pointer-events:none;
+    text-align:center;font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:7rem;color:var(--hi);opacity:0;
+    text-shadow:0 0 40px rgba(195,39,43,.7), 0 4px 0 #5e0e10;
+  }
+  #zan.on{animation:zanPop 1.1s cubic-bezier(.2,.9,.3,1) forwards;}
+  @keyframes zanPop{
+    0%{opacity:0;transform:scale(2.4) rotate(-6deg);}
+    18%{opacity:1;transform:scale(1) rotate(-6deg);}
+    70%{opacity:1;transform:scale(1.03) rotate(-6deg);}
+    100%{opacity:0;transform:scale(1.06) rotate(-6deg);}
+  }
+
+  #kaiWrap{position:fixed;inset:0;z-index:103;pointer-events:none;display:none;}
+  #kaiWrap.on{display:block;}
+  .kaiHalf{position:absolute;inset:0;background:#070503;opacity:0;transition:opacity .28s;}
+  .kaiHalf.a{clip-path:polygon(0 0,100% 0,100% 34%,0 64%);}
+  .kaiHalf.b{clip-path:polygon(0 64%,100% 34%,100% 100%,0 100%);}
+  #kaiWrap.dark .kaiHalf{opacity:1;}
+  #kaiWrap.split .kaiHalf{transition:transform .5s cubic-bezier(.2,.8,.3,1), opacity .5s ease .15s;opacity:0;}
+  #kaiWrap.split .kaiHalf.a{transform:translate(-3%,-9%);}
+  #kaiWrap.split .kaiHalf.b{transform:translate(3%,9%);}
+  #kaiSlash{
+    position:absolute;left:0;top:50%;height:4px;width:100%;
+    background:linear-gradient(90deg,transparent,#fff 18%,#ffeccb 50%,#fff 82%,transparent);
+    box-shadow:0 0 26px #fff, 0 0 60px rgba(255,236,203,.8);
+    transform:translateY(-50%) rotate(var(--kang,-8deg)) scaleX(0);
+    transform-origin:left center;
+  }
+  #kaiWrap.flash #kaiSlash{animation:kaiSweep .22s cubic-bezier(.2,0,.2,1) forwards;}
+  @keyframes kaiSweep{
+    0%{transform:translateY(-50%) rotate(var(--kang,-8deg)) scaleX(0);}
+    100%{transform:translateY(-50%) rotate(var(--kang,-8deg)) scaleX(1);}
+  }
+
+  #vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:88;opacity:0;
+    box-shadow:inset 0 0 120px 50px rgba(150,12,16,.65);
+    transition:opacity .6s;
+  }
+  #vignette.low{opacity:1;animation:heartbeat 1.1s ease-in-out infinite;}
+  @keyframes heartbeat{
+    0%,100%{box-shadow:inset 0 0 110px 42px rgba(150,12,16,.5);}
+    12%{box-shadow:inset 0 0 150px 70px rgba(190,18,22,.8);}
+    24%{box-shadow:inset 0 0 120px 50px rgba(150,12,16,.55);}
+    34%{box-shadow:inset 0 0 140px 62px rgba(180,16,20,.7);}
+  }
+  #bloodLayer{position:fixed;inset:0;pointer-events:none;z-index:95;overflow:hidden;}
+  .splat{
+    position:absolute;border-radius:48% 52% 55% 45% / 52% 46% 54% 48%;
+    background:radial-gradient(circle at 35% 35%, rgba(232,69,60,.95), rgba(122,16,18,.85) 55%, rgba(70,7,9,.75));
+    animation:splat .85s ease-out forwards;
+  }
+  @keyframes splat{
+    0%{transform:scale(.2) rotate(var(--rot));opacity:0;}
+    10%{transform:scale(1.08) rotate(var(--rot));opacity:1;}
+    100%{transform:scale(1.2) rotate(var(--rot)) translateY(16px);opacity:0;}
+  }
+
+  .dmgPop{
+    position:fixed;z-index:96;pointer-events:none;
+    font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:1.7rem;color:var(--hi-bright);
+    text-shadow:0 2px 8px rgba(0,0,0,.8), 0 0 14px rgba(232,69,60,.4);
+    animation:popRise .9s ease-out forwards;
+  }
+  .dmgPop.boost{color:var(--kane);font-size:2.2rem;text-shadow:0 2px 8px rgba(0,0,0,.8),0 0 20px rgba(199,154,62,.7);}
+  .dmgPop.mega{font-size:3rem !important;animation:popMega 1s ease-out forwards;}
+  @keyframes popMega{
+    0%{transform:translateY(10px) scale(.4);opacity:0;}
+    12%{transform:translateY(0) scale(1.35);opacity:1;}
+    30%{transform:translateY(-4px) scale(1.05);}
+    100%{transform:translateY(-50px) scale(1);opacity:0;}
+  }
+  .dmgPop.hurt{color:#ff7a72;font-size:1.4rem;}
+  .dmgPop.heal{color:var(--heal);font-size:1.4rem;}
+  .dmgPop.tagiri{color:#6fd0b4;font-size:1.4rem;}
+  @keyframes popRise{
+    0%{transform:translateY(8px) scale(.6);opacity:0;}
+    15%{transform:translateY(0) scale(1.15);opacity:1;}
+    35%{transform:translateY(-6px) scale(1);}
+    100%{transform:translateY(-42px) scale(.95);opacity:0;}
+  }
+
+  /* 武器別斬撃エフェクト */
+  .fx{position:absolute;pointer-events:none;z-index:6;}
+  .fxLong{
+    left:4%;right:4%;top:46%;height:3px;
+    background:linear-gradient(90deg,transparent,#fff 30%,#fff 70%,transparent);
+    box-shadow:0 0 16px #fff;transform:scaleX(0);transform-origin:left;
+    animation:fxSweep .26s ease-out forwards;
+  }
+  @keyframes fxSweep{
+    0%{transform:scaleX(0);opacity:1;}
+    55%{transform:scaleX(1);opacity:1;}
+    100%{transform:scaleX(1);opacity:0;}
+  }
+  .fxDag{
+    width:52px;height:2px;background:#fff;box-shadow:0 0 10px #fff;
+    animation:fxDag .24s ease-out forwards;opacity:0;
+  }
+  @keyframes fxDag{
+    0%{opacity:0;transform:rotate(var(--ang)) scaleX(.2);}
+    25%{opacity:1;transform:rotate(var(--ang)) scaleX(1.1);}
+    100%{opacity:0;transform:rotate(var(--ang)) scaleX(1.2) translateX(8px);}
+  }
+  .fxSpear{
+    width:16px;height:16px;border-radius:50%;
+    background:radial-gradient(circle,#fff 20%,rgba(255,236,203,.7) 50%,transparent 75%);
+    box-shadow:0 0 18px #fff;
+    animation:fxThrust .26s ease-out forwards;
+  }
+  @keyframes fxThrust{
+    0%{transform:scale(.2);opacity:1;}
+    45%{transform:scale(1.6);opacity:1;}
+    100%{transform:scale(2.6);opacity:0;}
+  }
+
+  /* 連撃カウンター */
+  #comboPop{
+    position:fixed;right:5%;bottom:34%;z-index:96;pointer-events:none;
+    font-family:'Shippori Mincho',serif;font-weight:800;color:var(--kane);
+    text-shadow:0 0 16px rgba(199,154,62,.7), 0 2px 0 #4a3812;
+    opacity:0;
+  }
+  #comboPop.on{animation:comboPop .55s cubic-bezier(.2,1.4,.4,1) forwards;}
+  @keyframes comboPop{
+    0%{opacity:0;transform:scale(.5) rotate(4deg);}
+    30%{opacity:1;transform:scale(1.25) rotate(-2deg);}
+    60%{transform:scale(1) rotate(0);}
+    100%{opacity:0;transform:scale(1) translateY(-14px);}
+  }
+
+  /* ターン合計の叩きつけ */
+  #turnTotal{
+    position:fixed;left:0;right:0;top:46%;z-index:97;pointer-events:none;
+    text-align:center;font-family:'Shippori Mincho',serif;font-weight:800;
+    color:var(--washi);opacity:0;
+  }
+  #turnTotal .tLbl{font-size:.9rem;letter-spacing:.4em;color:var(--washi-dim);display:block;}
+  #turnTotal .tNum{font-size:3.4rem;color:var(--kane);text-shadow:0 0 28px rgba(199,154,62,.6), 0 3px 0 #4a3812;}
+  #turnTotal.on{animation:turnSlam 1.1s cubic-bezier(.15,1.2,.3,1) forwards;}
+  @keyframes turnSlam{
+    0%{opacity:0;transform:scale(1.8);}
+    18%{opacity:1;transform:scale(.96);}
+    28%{transform:scale(1.02);}
+    75%{opacity:1;transform:scale(1);}
+    100%{opacity:0;transform:scale(1) translateY(-16px);}
+  }
+
+  #banner{
+    position:fixed;left:0;right:0;top:38%;z-index:97;pointer-events:none;
+    text-align:center;font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:2rem;letter-spacing:.6em;text-indent:.6em;color:var(--washi);
+    text-shadow:0 0 24px rgba(0,0,0,.9);opacity:0;
+  }
+  #banner.show{animation:bannerSweep 1s ease-out forwards;}
+  #banner.foe{color:var(--hi-bright);}
+  #banner.rankup{
+    color:var(--kane);font-size:2.6rem;
+    text-shadow:0 0 36px rgba(199,154,62,.8), 0 2px 0 #5a4112;
+  }
+  #banner.mikiri{
+    color:var(--mikiri);font-size:2.4rem;
+    text-shadow:0 0 32px rgba(159,216,232,.8), 0 2px 0 #1d4a58;
+  }
+  #banner.stagger{
+    color:#ffb35e;font-size:2.4rem;
+    text-shadow:0 0 32px rgba(255,179,94,.8), 0 2px 0 #6e4210;
+  }
+  @keyframes bannerSweep{
+    0%{opacity:0;transform:translateX(40px);}
+    20%{opacity:1;transform:translateX(0);}
+    75%{opacity:1;}
+    100%{opacity:0;transform:translateX(-30px);}
+  }
+
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-7px)}40%{transform:translateX(6px)}
+    60%{transform:translateX(-4px)}80%{transform:translateX(3px)}
+  }
+  .shake{animation:shake .35s;}
+  @keyframes bigshake{
+    0%,100%{transform:translate(0,0)}
+    15%{transform:translate(-11px,3px)}30%{transform:translate(9px,-4px)}
+    45%{transform:translate(-7px,2px)}60%{transform:translate(6px,-2px)}
+    75%{transform:translate(-4px,1px)}
+  }
+  .bigshake{animation:bigshake .5s;}
+  @keyframes punch{0%{transform:scale(1);}30%{transform:scale(.965);}100%{transform:scale(1);}}
+  .punch{animation:punch .22s ease-out;}
+  .hitflash{box-shadow:0 0 0 2px rgba(255,235,210,.9), 0 0 26px rgba(232,69,60,.55) !important;transition:box-shadow .05s;}
+  .muzzle{box-shadow:0 0 0 2px rgba(255,244,214,.95), 0 0 34px rgba(255,210,120,.7) !important;transition:box-shadow .04s;}
+
+  header{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding:6px 2px 8px;margin-bottom:10px;}
+  header h1{font-family:'Shippori Mincho',serif;font-weight:800;font-size:1.25rem;letter-spacing:.16em;}
+  header .sub{color:var(--washi-dim);font-size:.7rem;letter-spacing:.2em;}
+  #turnLabel{margin-left:auto;font-family:'Shippori Mincho',serif;color:var(--kane);font-size:.85rem;letter-spacing:.15em;}
+  #muteBtn{
+    background:none;border:1px solid var(--line);color:var(--washi-dim);
+    border-radius:4px;font-size:.68rem;padding:3px 9px;cursor:pointer;letter-spacing:.1em;
+    font-family:'Zen Kaku Gothic New',sans-serif;
+  }
+  #muteBtn:hover{border-color:var(--washi-dim);}
+
+  #enemy{
+    border:1px solid var(--line);border-radius:6px;padding:12px 14px;
+    background:linear-gradient(180deg, rgba(70,64,58,.18), transparent);
+    position:relative;transition:box-shadow .25s, transform .3s, filter .3s;
+  }
+  #enemy.staggerVis{transform:rotate(-1.4deg) translateY(2px);filter:saturate(.5) brightness(.85);}
+  .nameRow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .uName{font-family:'Shippori Mincho',serif;font-weight:700;font-size:1.05rem;letter-spacing:.1em;}
+  .intent{margin-left:auto;font-size:.8rem;color:var(--washi-dim);}
+  .intent b{color:var(--hi-bright);font-size:1rem;font-family:'Shippori Mincho',serif;}
+  .intent .pierce{color:#ff9a92;font-size:.72rem;}
+  .intent .safe{color:#7fa8c0;font-size:.72rem;}
+  .intent .stag{color:#ffb35e;}
+  .hpWrap{margin-top:8px;}
+  .hpBar{height:14px;border:1px solid var(--line);border-radius:3px;background:#0c0a08;overflow:visible;position:relative;}
+  .hpFill{height:100%;background:linear-gradient(90deg,#7e1d20,var(--hi));transition:width .25s;position:relative;z-index:1;border-radius:2px;}
+  .hpFill.player{background:linear-gradient(90deg,#5a4720,var(--kane));}
+  .hpGhost{
+    position:absolute;left:0;top:0;height:100%;
+    background:linear-gradient(90deg,#4a0d0f,#8a181b);
+    transition:width 1.35s cubic-bezier(.15,.75,.25,1) .2s;
+  }
+  .drip{
+    position:absolute;top:100%;width:5px;border-radius:0 0 5px 5px;
+    background:linear-gradient(180deg,#8a181b,#3f0a0c);
+    animation:drip 1.5s ease-in forwards;
+  }
+  @keyframes drip{
+    0%{height:0;opacity:.95;}
+    50%{height:13px;opacity:.9;}
+    100%{height:22px;opacity:0;transform:translateY(10px);}
+  }
+  .hpNum{font-size:.78rem;color:var(--washi-dim);margin-top:3px;display:flex;justify-content:space-between;}
+  .hpNum .lowHp{color:var(--hi-bright);font-weight:700;animation:lowPulse 1.1s infinite;}
+  @keyframes lowPulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+  .blockBadge{
+    display:inline-block;min-width:1.8em;text-align:center;
+    border:1px solid #5d7a8a;color:#9fc4d8;border-radius:3px;font-size:.75rem;padding:1px 5px;margin-left:8px;
+  }
+  .tagiriBadge{
+    display:inline-block;border:1px solid var(--tagiri);color:#6fd0b4;
+    border-radius:3px;font-size:.75rem;padding:1px 7px;margin-left:8px;
+  }
+
+  #maai{
+    border:1px solid var(--line);border-radius:6px;margin-top:10px;
+    padding:8px 14px 10px;position:relative;
+    background:linear-gradient(180deg, rgba(70,64,58,.1), transparent);
+    transition:border-color .3s, box-shadow .3s;
+  }
+  #maai.shichi{
+    border-color:var(--hi);
+    box-shadow:0 0 16px rgba(195,39,43,.25) inset, 0 0 10px rgba(195,39,43,.2);
+    animation:shichiPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes shichiPulse{
+    0%,100%{box-shadow:0 0 14px rgba(195,39,43,.2) inset;}
+    50%{box-shadow:0 0 26px rgba(195,39,43,.45) inset;}
+  }
+  #maai .mTop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  #maai .mTitle{font-size:.66rem;color:var(--washi-dim);letter-spacing:.3em;}
+  #maaiName{font-family:'Shippori Mincho',serif;font-weight:800;font-size:1.05rem;letter-spacing:.3em;color:var(--washi);}
+  #maai.shichi #maaiName{color:var(--hi-bright);}
+  #maaiMods{margin-left:auto;font-size:.7rem;color:var(--washi-dim);}
+  #maaiMods .ga{color:var(--kane);}
+  #maaiMods .mo{color:#9fc4d8;}
+  .mLine{position:relative;height:30px;margin-top:6px;}
+  .mRail{position:absolute;left:26px;right:26px;top:50%;height:2px;background:var(--line);}
+  .mNotch{position:absolute;top:50%;width:2px;height:9px;transform:translateY(-50%);background:var(--tetsu);}
+  .mFoe,.mKnight{
+    position:absolute;top:50%;transform:translate(-50%,-50%);
+    font-family:'Shippori Mincho',serif;font-weight:800;font-size:1rem;
+    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  }
+  .mFoe{left:16px;background:#2a1414;border:1px solid var(--hi);color:var(--hi-bright);}
+  .mKnight{background:#241d12;border:1px solid var(--kane);color:var(--kane);transition:left .45s cubic-bezier(.3,1.3,.4,1);}
+  #maaiHint{font-size:.62rem;color:var(--washi-dim);letter-spacing:.05em;}
+  #maaiHint .fire{color:var(--hi-bright);}
+
+  #player{
+    border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-top:10px;
+    background:linear-gradient(180deg, rgba(199,154,62,.06), transparent);
+    position:relative;
+  }
+  .buffRow{display:flex;gap:8px;margin-top:7px;flex-wrap:wrap;min-height:1.4em;}
+  .buff{font-size:.74rem;border-radius:3px;padding:2px 8px;letter-spacing:.05em;}
+  .buff.martyr{border:1px solid var(--hi);color:var(--hi-bright);}
+  .buff.bless{border:1px solid var(--kane);color:var(--kane);}
+  .buff.oath{border:1px solid #7a6aa0;color:#b0a0d8;}
+  .buff.kakugo{border:1px solid var(--kane);color:var(--kane);background:rgba(199,154,62,.08);}
+  .buff.mikiri{border:1px solid var(--mikiri);color:var(--mikiri);}
+  .buff.pulse{animation:buffPulse .45s ease-out;}
+  @keyframes buffPulse{
+    0%{transform:scale(1);}35%{transform:scale(1.22);box-shadow:0 0 14px rgba(232,69,60,.6);}100%{transform:scale(1);}
+  }
+
+  #kakugoWrap{margin-top:9px;}
+  #kakugoLabel{display:flex;font-size:.68rem;color:var(--washi-dim);letter-spacing:.15em;margin-bottom:3px;}
+  #kakugoLabel b{color:var(--kane);font-family:'Shippori Mincho',serif;margin-left:6px;letter-spacing:.1em;}
+  #kakugoRankName{margin-left:auto;color:var(--kane);font-family:'Shippori Mincho',serif;}
+  .kBar{height:8px;border:1px solid var(--line);border-radius:3px;background:#0c0a08;position:relative;overflow:visible;}
+  .kFill{
+    height:100%;border-radius:2px;width:0%;
+    background:linear-gradient(90deg,#6e5520,var(--kane),#f0cf7e);
+    box-shadow:0 0 8px rgba(199,154,62,.5);
+    transition:width .5s ease-out;
+  }
+  .kBar.maxed .kFill{animation:kMax 1s ease-in-out infinite;}
+  @keyframes kMax{
+    0%,100%{box-shadow:0 0 8px rgba(199,154,62,.5);}
+    50%{box-shadow:0 0 18px rgba(240,207,126,.95);}
+  }
+  .kTick{position:absolute;top:-3px;width:2px;height:14px;background:var(--washi-dim);opacity:.6;}
+  .kTick span{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    font-size:.58rem;color:var(--washi-dim);white-space:nowrap;letter-spacing:.05em;
+  }
+
+  .energyRow{display:flex;align-items:center;gap:6px;margin-top:18px;}
+  .pip{width:15px;height:15px;border-radius:50%;border:1px solid var(--kane);transition:transform .2s, background .2s, box-shadow .2s;}
+  .pip.full{background:var(--kane);box-shadow:0 0 7px rgba(199,154,62,.6);}
+  .pip.empty{transform:scale(.75);border-color:var(--tetsu);}
+  .energyRow .lbl{font-size:.72rem;color:var(--washi-dim);margin-right:2px;letter-spacing:.1em;}
+  #bloodHint{animation:lowPulse 1.4s infinite;}
+
+  #swords{display:flex;gap:8px;margin-top:10px;}
+  .sword{
+    flex:1;border:1px solid var(--line);border-radius:6px;padding:9px 10px;
+    background:#1b1611;transition:border-color .15s, background .15s;user-select:none;
+  }
+  .sword .sName{font-family:'Shippori Mincho',serif;font-weight:700;letter-spacing:.06em;font-size:.86rem;}
+  .sword .sType{font-size:.62rem;color:var(--washi-dim);margin-left:5px;}
+  .sword .sPassive{font-size:.66rem;color:var(--washi-dim);margin-top:4px;line-height:1.45;}
+  .sword.active{
+    border-color:var(--kane);background:linear-gradient(180deg, rgba(199,154,62,.13), #1b1611);
+    box-shadow:0 0 12px rgba(199,154,62,.15) inset;
+  }
+  .sword.active .sName{color:var(--kane);}
+  .sword.drawn{animation:swordDraw .3s ease-out;}
+  @keyframes swordDraw{
+    0%{transform:scale(1);}40%{transform:scale(1.04);box-shadow:0 0 22px rgba(199,154,62,.5);}100%{transform:scale(1);}
+  }
+  #swordHint{font-size:.64rem;color:var(--washi-dim);margin-top:5px;letter-spacing:.05em;}
+
+  #log{
+    margin-top:10px;border:1px solid var(--line);border-radius:6px;
+    padding:6px 12px;
+    font-size:.72rem;line-height:1.65;color:var(--washi-dim);
+    max-height:96px;overflow-y:auto;
+  }
+  #log .l-dmg{color:var(--hi-bright);}
+  #log .l-gold{color:var(--kane);}
+  #log .l-sys{color:#7a8aa0;}
+  #log .l-tagiri{color:#6fd0b4;}
+  #log .l-heal{color:var(--heal);}
+  #log .l-mikiri{color:var(--mikiri);}
+  #log p{border-bottom:1px dashed rgba(58,51,43,.5);padding:2px 0;}
+
+  #handArea{margin-top:12px;}
+  #handLabel{font-size:.7rem;color:var(--washi-dim);letter-spacing:.25em;margin-bottom:6px;display:flex;}
+  #pileInfo{margin-left:auto;letter-spacing:.05em;}
+  .pileBtn{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;}
+  .pileBtn:hover{color:var(--washi);}
+  #hand{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 8px;scrollbar-width:thin;min-height:176px;}
+  .card{
+    flex:0 0 126px;min-height:170px;border:1px solid var(--line);border-radius:7px;
+    background:linear-gradient(180deg,#252019,#1a1510);
+    padding:9px 9px 10px;cursor:pointer;position:relative;
+    transition:transform .12s, border-color .12s, box-shadow .12s;
+    display:flex;flex-direction:column;
+  }
+  .card:hover{transform:translateY(-5px);}
+  .card:active{transform:translateY(-2px) scale(.97);}
+  .card .cost{
+    position:absolute;top:-9px;left:-7px;width:26px;height:26px;border-radius:50%;
+    background:var(--sumi);border:1px solid var(--kane);color:var(--kane);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;
+    font-family:'Shippori Mincho',serif;
+  }
+  .card.bloodNeed .cost{border-color:var(--hi);color:var(--hi-bright);}
+  .card .cName{font-family:'Shippori Mincho',serif;font-weight:700;font-size:.95rem;letter-spacing:.06em;margin:4px 0 2px;}
+  .card.magic .cName{color:var(--hi-bright);}
+  .card .cType{font-size:.62rem;color:var(--washi-dim);letter-spacing:.1em;}
+  .card .cType .sw{color:var(--kane);}
+  .card .cDesc{font-size:.7rem;line-height:1.5;margin-top:6px;color:var(--washi);flex:1;}
+  .card .cStep{font-size:.64rem;margin-top:3px;color:var(--hi-bright);}
+  .card .cStep.back{color:#9fc4d8;}
+  .card .cCalc{font-family:'Shippori Mincho',serif;font-size:.8rem;margin-top:3px;color:var(--washi-dim);}
+  .card .cCalc b{color:var(--washi);}
+  .card .cCalc.up b{color:var(--kane);text-shadow:0 0 8px rgba(199,154,62,.5);}
+  .card .cNote{font-size:.62rem;color:var(--hi-bright);margin-top:4px;min-height:1em;}
+  .card.unplayable{opacity:.42;cursor:not-allowed;}
+  .card.unplayable:hover{transform:none;}
+  .card.magic{border-color:#5e2022;background:linear-gradient(180deg,#2a1414,#1a0e0e);}
+  .card.armed{border-color:var(--hi-bright);box-shadow:0 0 14px rgba(232,69,60,.45);transform:translateY(-7px);}
+  .card.armed .cNote{font-weight:700;}
+  .card.kai{
+    border-color:var(--hi);
+    background:linear-gradient(180deg,#33150f,#1c0c08);
+    animation:kaiGlow 1.4s ease-in-out infinite;
+  }
+  .card.kai .cName{color:var(--hi-bright);text-shadow:0 0 8px rgba(232,69,60,.5);}
+  @keyframes kaiGlow{
+    0%,100%{box-shadow:0 0 6px rgba(232,69,60,.3);}
+    50%{box-shadow:0 0 18px rgba(232,69,60,.65);}
+  }
+  .cardFly{position:fixed;z-index:96;pointer-events:none;animation:cardFly .35s ease-in forwards;}
+  @keyframes cardFly{
+    0%{opacity:1;transform:translateY(0) scale(1) rotate(0);}
+    100%{opacity:0;transform:translateY(-90px) scale(1.12) rotate(-4deg);}
+  }
+
+  #controls{display:flex;gap:10px;margin-top:8px;}
+  button.btn{
+    font-family:'Shippori Mincho',serif;font-weight:700;letter-spacing:.2em;
+    background:transparent;color:var(--washi);border:1px solid var(--washi-dim);
+    border-radius:5px;padding:10px 22px;font-size:.95rem;cursor:pointer;flex:1;
+    transition:background .15s,border-color .15s;
+  }
+  button.btn:hover{background:rgba(230,217,191,.07);border-color:var(--washi);}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;}
+
+  #pileModal{
+    position:fixed;inset:0;background:rgba(10,8,6,.88);z-index:99;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  #pileModal.show{display:flex;}
+  #pileModal .box{
+    background:var(--sumi2);border:1px solid var(--line);border-radius:8px;
+    max-width:420px;width:100%;max-height:70vh;overflow-y:auto;padding:16px 18px;
+  }
+  #pileModal h3{font-family:'Shippori Mincho',serif;letter-spacing:.2em;font-size:1rem;margin-bottom:10px;color:var(--kane);}
+  #pileModal .row{display:flex;gap:8px;font-size:.8rem;padding:5px 0;border-bottom:1px dashed rgba(58,51,43,.5);}
+  #pileModal .row .n{font-family:'Shippori Mincho',serif;font-weight:700;min-width:7em;}
+  #pileModal .row .ct{color:var(--kane);min-width:2.5em;}
+  #pileModal .row .ds{color:var(--washi-dim);flex:1;}
+  #pileModal .hint{font-size:.68rem;color:var(--washi-dim);margin-top:10px;text-align:center;}
+
+  #oathModal{
+    position:fixed;inset:0;background:rgba(10,8,6,.94);z-index:101;
+    display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px;
+  }
+  #oathModal.show{display:flex;}
+  #oathModal h2{
+    font-family:'Shippori Mincho',serif;font-weight:800;font-size:1.5rem;
+    letter-spacing:.4em;text-indent:.4em;color:var(--washi);margin-bottom:4px;
+  }
+  #oathModal .lead{color:var(--washi-dim);font-size:.78rem;letter-spacing:.1em;margin-bottom:8px;}
+  .oath{
+    width:100%;max-width:430px;border:1px solid var(--line);border-radius:8px;
+    background:var(--sumi2);padding:13px 16px;cursor:pointer;text-align:left;
+    transition:border-color .15s, transform .12s;
+  }
+  .oath:hover{border-color:#b0a0d8;transform:translateY(-2px);}
+  .oath .oName{font-family:'Shippori Mincho',serif;font-weight:700;font-size:1rem;letter-spacing:.15em;color:#b0a0d8;}
+  .oath .oBoon{font-size:.78rem;color:var(--kane);margin-top:5px;}
+  .oath .oBane{font-size:.78rem;color:var(--hi-bright);margin-top:2px;}
+
+  #overlay{
+    position:fixed;inset:0;background:rgba(10,8,6,.9);z-index:100;
+    display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    text-align:center;padding:20px;
+  }
+  #overlay.show{display:flex;}
+  #overlay h2{font-family:'Shippori Mincho',serif;font-weight:800;font-size:2.4rem;letter-spacing:.5em;text-indent:.5em;}
+  #overlay h2.win{color:var(--kane);text-shadow:0 0 30px rgba(199,154,62,.4);}
+  #overlay h2.lose{color:var(--hi);text-shadow:0 0 30px rgba(195,39,43,.5);}
+  #overlay .title{
+    font-family:'Shippori Mincho',serif;font-size:1.15rem;letter-spacing:.2em;color:var(--kane);
+    border:1px solid var(--kane);border-radius:4px;padding:4px 18px;
+  }
+  #overlay .stats{color:var(--washi-dim);font-size:.85rem;line-height:2;}
+  #overlay .stats b{color:var(--washi);}
+  #overlay .ok{color:var(--hi-bright);font-family:'Shippori Mincho',serif;font-size:1.05rem;}
+  #overlay .shareRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  #overlay button.btn{flex:none;padding:11px 30px;}
+  #overlay .shareTxt{
+    max-width:430px;font-size:.74rem;color:var(--washi-dim);
+    border:1px dashed var(--line);border-radius:6px;padding:9px 12px;white-space:pre-wrap;text-align:left;
+  }
+
+  @media (max-width:480px){
+    header h1{font-size:1rem;letter-spacing:.08em;}
+    header .sub{display:none;}
+    .card{flex-basis:118px;min-height:162px;}
+    #banner{font-size:1.5rem;}
+    #banner.rankup,#banner.mikiri,#banner.stagger{font-size:1.9rem;}
+    #zan{font-size:5rem;}
+    #turnTotal .tNum{font-size:2.6rem;}
+    #swords{flex-direction:column;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .splat,.dmgPop,#banner.show,.shake,.bigshake,.punch,#zan.on,#killflash.on,
+    #kaiWrap.flash #kaiSlash,#comboPop.on,#turnTotal.on,.fxLong,.fxDag,.fxSpear{animation-duration:.01s !important;}
+    #vignette.low,#maai.shichi,.card.kai,body.adre2 #furyEdge,.kBar.maxed .kFill{animation:none;}
+    body.adre1 #app, body.adre2 #app{transform:none;}
+  }
+</style>
+</head>
+<body>
+<div id="furyEdge"></div>
+<div id="bloodflash"></div>
+<div id="goldflash"></div>
+<div id="killflash"></div>
+<div id="vignette"></div>
+<div id="dimEdges"></div>
+<div id="bloodLayer"></div>
+<div id="banner"></div>
+<div id="comboPop"></div>
+<div id="turnTotal"><span class="tLbl">この太刀目</span><span class="tNum" id="turnTotalNum"></span></div>
+<div id="zan">斬</div>
+<div id="kaiWrap">
+  <div class="kaiHalf a"></div>
+  <div class="kaiHalf b"></div>
+  <div id="kaiSlash"></div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>ハラキリセイバー</h1>
+    <span class="sub">試作之伍 ─ 体幹と見切り</span>
+    <span id="turnLabel"></span>
+    <button id="muteBtn">音:入</button>
+  </header>
+
+  <section id="enemy">
+    <div class="nameRow">
+      <span class="uName">影衆の銃士</span>
+      <span class="intent" id="enemyIntent"></span>
+    </div>
+    <div class="hpWrap">
+      <div class="hpBar"><div class="hpGhost" id="enemyHpGhost" style="width:100%"></div><div class="hpFill" id="enemyHpFill"></div></div>
+      <div class="hpNum"><span id="enemyHpText"></span><span id="enemyLoop" style="color:var(--hi-bright)"></span></div>
+    </div>
+  </section>
+
+  <section id="maai">
+    <div class="mTop">
+      <span class="mTitle">間 合</span>
+      <span id="maaiName"></span>
+      <span id="maaiMods"></span>
+    </div>
+    <div class="mLine">
+      <div class="mRail"></div>
+      <div class="mNotch" style="left:22%"></div>
+      <div class="mNotch" style="left:44%"></div>
+      <div class="mNotch" style="left:66%"></div>
+      <div class="mNotch" style="left:88%"></div>
+      <div class="mFoe">銃</div>
+      <div class="mKnight" id="maaiKnight">騎</div>
+    </div>
+    <div id="maaiHint"></div>
+  </section>
+
+  <section id="player">
+    <div class="nameRow">
+      <span class="uName">咎人の騎士</span>
+      <span id="playerBlock"></span>
+      <span id="playerTagiri"></span>
+    </div>
+    <div class="hpWrap">
+      <div class="hpBar" id="playerHpBar"><div class="hpGhost" id="playerHpGhost" style="width:100%"></div><div class="hpFill player" id="playerHpFill"></div><div class="hpThreat" id="hpThreat" style="display:none"></div></div>
+      <div class="hpNum"><span id="playerHpText"></span></div>
+    </div>
+    <div class="buffRow" id="buffRow"></div>
+    <div id="kakugoWrap">
+      <div id="kakugoLabel"><span>覚 悟</span><b id="kakugoVal"></b><span id="kakugoRankName"></span></div>
+      <div class="kBar" id="kakugoBar">
+        <div class="kFill" id="kakugoFill"></div>
+        <div class="kTick" style="left:20%"><span>決意</span></div>
+        <div class="kTick" style="left:50%"><span>捨身</span></div>
+        <div class="kTick" style="left:90%"><span>死人</span></div>
+      </div>
+    </div>
+    <div class="energyRow">
+      <span class="lbl">気力</span>
+      <span id="pips"></span>
+      <span class="lbl" style="margin-left:10px;color:var(--hi-bright)" id="bloodHint"></span>
+    </div>
+    <div id="swords"></div>
+    <div id="swordHint">剣技カードを使うと、その剣に自動で構え替わる(抜刀)。</div>
+  </section>
+
+  <section id="handArea">
+    <div id="handLabel"><span>手 札</span><span id="pileInfo"><span class="pileBtn" id="deckBtn"></span> ／ <span class="pileBtn" id="discardBtn"></span></span></div>
+    <div id="hand"></div>
+    <div id="controls">
+      <button class="btn" id="endTurnBtn">手 仕 舞</button>
+    </div>
+  </section>
+
+  <div id="log"></div>
+</div>
+
+<div id="pileModal" onclick="this.classList.remove('show')">
+  <div class="box">
+    <h3 id="pileTitle"></h3>
+    <div id="pileList"></div>
+    <div class="hint">タップで閉じる ※山札の並び順は伏せてあります</div>
+  </div>
+</div>
+
+<div id="oathModal">
+  <h2>出 立 の 誓 い</h2>
+  <div class="lead">腹を切りに、王の御前へ。銃を持つ刺客どもの中を、刀ひとつで。</div>
+  <div id="oathList" style="display:flex;flex-direction:column;gap:10px;width:100%;align-items:center;"></div>
+</div>
+
+<div id="overlay">
+  <h2 id="overlayTitle"></h2>
+  <div class="title" id="earnedTitle"></div>
+  <div class="stats" id="overlayStats"></div>
+  <div class="ok" id="overkillLine"></div>
+  <div class="shareTxt" id="shareTxt"></div>
+  <div class="shareRow">
+    <button class="btn" id="shareXBtn">Xで共有</button>
+    <button class="btn" id="shareCopyBtn">文をコピー</button>
+  </div>
+  <button class="btn" onclick="initGame()">再 戦</button>
+  <div style="font-size:.68rem;color:var(--washi-dim);letter-spacing:.05em;">試作版です。感想は X の #ハラキリセイバー か、配布者まで一言ください。</div>
+</div>
+
+<script>
+"use strict";
+/* ════════════════ データ定義 ════════════════ */
+const SWORDS = {
+  long: {
+    id:"long", name:"錆びた長剣", type:"長剣",
+    passive:"構え中、銃弾を弾き 被ダメージ -2。",
+    batto:"抜刀: ブロック 2 を得る。",
+  },
+  dagger: {
+    id:"dagger", name:"殉教者の短剣", type:"短剣",
+    passive:"HPを失うたび、次の攻撃 +3(累積)。",
+    batto:"抜刀: おのれの皮を一枚裂く(HP -1)。",
+  },
+  spear: {
+    id:"spear", name:"吸血の槍", type:"槍",
+    passive:"構え中、与えたダメージの25%を「滾り」として得る(次に失うHPの身代わり・回復ではない)。血で払った技では滾らない。",
+    batto:"抜刀: 敵に 2 ダメージ。",
+  },
+};
+
+const CARDS = {
+  zangeki:   {key:"zangeki", name:"斬撃", sword:"long", kind:"attack", cost:1, dmg:6, hits:1, step:1,
+              desc:"6 ダメージ。"},
+  ukenagashi:{key:"ukenagashi", name:"受け流し", sword:null, kind:"skill", cost:1, block:5, step:-1,
+              desc:"ブロック 5 を得る。"},
+  chiburi:   {key:"chiburi", name:"血振り", sword:null, kind:"skill", cost:0, selfDmg:3, draw:2,
+              desc:"HP 3 を失う。カードを 2 枚引く。"},
+  chidome:   {key:"chidome", name:"血止め", sword:null, kind:"skill", cost:1, heal:6, step:-1, kakugoLoss:5,
+              desc:"HP 6 を回復する。覚悟が 5 減る(据わった位は下がらない)。"},
+  nirenzashi:{key:"nirenzashi", name:"二連刺し", sword:"dagger", kind:"attack", cost:1, dmg:4, hits:2, step:1,
+              desc:"4 ダメージを 2 回与える。"},
+  chizome:   {key:"chizome", name:"血染めの刃", sword:"dagger", kind:"attack", cost:0, dmg:5, hits:1, selfDmg:2, draw:1, step:1,
+              desc:"HP 2 を失う。5 ダメージ。1 枚引く。"},
+  shitotsu:  {key:"shitotsu", name:"刺突", sword:"spear", kind:"attack", cost:1, dmg:8, hits:1,
+              desc:"8 ダメージ。長柄ゆえ、その場から届く。"},
+  ugachi:    {key:"ugachi", name:"穿ち", sword:"spear", kind:"attack", cost:2, special:"ugachi", hits:1,
+              desc:"失ったHPの半分(切り上げ)のダメージ。その場から届く。"},
+  seikon:    {key:"seikon", name:"《聖痕》", sword:"dagger", kind:"magic", cost:1, magic:true,
+              desc:"HPが 1 になるまで失う。失った 1 点ごとに祝福 1 を得る(攻撃+1・永続)。儀式は生身を要求する(滾りで身代わり不可)。"},
+  sekinen:   {key:"sekinen", name:"《積年》", sword:"long", kind:"magic", cost:1, magic:true,
+              desc:"この戦闘中、魔法以外のカードに書かれた数字がすべて 1 増える(ダメージ・回数・ブロック・ドロー・自傷・コスト・踏み込み、例外なく)。重ねがけ可。"},
+  kawaki:    {key:"kawaki", name:"《渇き》", sword:"spear", kind:"magic", cost:1, magic:true,
+              desc:"この戦闘中、滾りの獲得量が 2 倍になる。重ねて唱えればさらに倍。"},
+};
+
+const KAI_CARD = {key:"kaishaku", name:"《介錯一閃》", sword:null, kind:"kaishaku", cost:0, hits:1,
+                  desc:"流した血 ×1 のダメージを与える。一度きり。その場から、すべてを斬る。"};
+
+const DECK_LIST = ["zangeki","zangeki","ukenagashi","ukenagashi","chiburi","chiburi","chidome",
+                   "nirenzashi","nirenzashi","chizome","chizome","shitotsu","shitotsu","ugachi",
+                   "seikon","sekinen","kawaki"];
+
+const OATHS = {
+  fusyaku: {id:"fusyaku", name:"不惜身命の誓い",
+            boon:"最大HP +20", bane:"毎ターン終了時、HP 2 を失う(1 未満にはならない)"},
+  shikkoku:{id:"shikkoku", name:"漆黒の誓い",
+            boon:"気力の最大 +1", bane:"最大HP -15"},
+  syura:   {id:"syura", name:"修羅の誓い",
+            boon:"すべての攻撃 +2", bane:"得るブロックが半減する(切り上げ)"},
+};
+
+const MAAI = [
+  {name:"遠間", pos:88},
+  {name:"中間", pos:66},
+  {name:"近間", pos:44},
+  {name:"死地", pos:22},
+];
+/* 長剣=幅広く堅実 / 短剣=死地でしか意味を成さない刃 / 槍=堅守でどこでもそこそこ */
+const MAAI_MOD = {
+  long:  [{atk:-1,def:+3},{atk: 0,def:+1},{atk:+2,def:-1},{atk:+4,def:-2}],
+  dagger:[{atk:-6,def:+3},{atk:-4,def:+1},{atk: 0,def:-1},{atk:+8,def:-4}],
+  spear: [{atk:+1,def:+4},{atk:+2,def:+3},{atk:+1,def:+1},{atk:-2,def:-1}],
+};
+
+const RANKS = [
+  {need:10, name:"決意", effect:"攻撃 +2"},
+  {need:25, name:"捨身", effect:"気力の最大 +1"},
+  {need:45, name:"死人", effect:"攻撃 +3・《介錯一閃》が手札に宿る"},
+];
+const KAKUGO_MAX = 50;
+
+/* hits>1 は連射(合計でブロック・見切り判定) */
+const ENEMY_PATTERN = [
+  {name:"速射", atk:12, hits:1},
+  {name:"連射", atk:4, hits:2},
+  {name:"装填", atk:0, hits:1, reload:true},
+  {name:"必殺・狙撃", atk:18, hits:1},
+];
+const BLOOD_RATE = 3;
+
+/* ════════════════ 状態 ════════════════ */
+let S = null;
+let armedIdx = -1, busy = false, lastMartyr = 0, endArmed = false;
+
+function initGame(){
+  S = {
+    turn: 1,
+    pHp: 60, pMax: 60, pBlock: 0, tagiri: 0,
+    eHp: 100, eMax: 100,
+    energy: 3, energyMax: 3,
+    sword: "long",
+    martyr: 0, bless: 0, mikiri: 0,
+    sekinen: 0, tagiriMult: 1,
+    maai: 1,
+    kakugoRank: 0,
+    kaishakuUsed: false,
+    combo: 0, turnDmg: 0,
+    overkill: 0, maxHit: 0,
+    maaiSum: 0, maaiN: 0, maaiShichiN: 0,
+    swordUse: {long:0, dagger:0, spear:0},
+    bloodPays: 0, mikiriCount: 0, dmgTaken: 0,
+    fury: 0, enraged: false,
+    staggered50: false, staggered25: false, enemyStaggered: false,
+    wonByKai: false,
+    oath: null,
+    deck: shuffle(DECK_LIST.slice()),
+    hand: [], discard: [],
+    patIdx: 0, loop: 0, rage: 0,
+    bloodSpent: 0,
+  };
+  armedIdx = -1; busy = false; lastMartyr = 0; endArmed = false;
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("log").innerHTML = "";
+  document.getElementById("vignette").classList.remove("low");
+  document.getElementById("dimEdges").classList.remove("low");
+  document.getElementById("enemy").classList.remove("staggerVis");
+  document.body.classList.remove("adre1","adre2");
+  showOathSelect();
+}
+
+function showOathSelect(){
+  const list = document.getElementById("oathList");
+  list.innerHTML = "";
+  for(const id of Object.keys(OATHS)){
+    const o = OATHS[id];
+    const b = document.createElement("button");
+    b.className = "oath";
+    b.innerHTML = '<div class="oName">' + o.name + '</div>' +
+                  '<div class="oBoon">恩寵: ' + o.boon + '</div>' +
+                  '<div class="oBane">代償: ' + o.bane + '</div>';
+    b.onclick = ()=>chooseOath(id);
+    list.appendChild(b);
+  }
+  document.getElementById("oathModal").classList.add("show");
+}
+
+function chooseOath(id){
+  S.oath = id;
+  if(id==="fusyaku"){ S.pMax += 20; S.pHp += 20; }
+  if(id==="shikkoku"){ S.energyMax += 1; S.pMax -= 15; S.pHp = Math.min(S.pHp, S.pMax); }
+  document.getElementById("oathModal").classList.remove("show");
+  sfx("gacha");
+  log("──「銃声の中を、刀ひとつで」──","sys");
+  log("「" + OATHS[id].name + "」を立てた。", "gold");
+  log("攻撃カードは踏み込む。踏み込めば銃火を浴びる。防御カードは間を切る。","sys");
+  startTurn();
+}
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function oathAtk(){ return S.oath==="syura" ? 2 : 0; }
+function kakugoAtk(){ return (S.kakugoRank>=1?2:0) + (S.kakugoRank>=3?3:0); }
+function maaiAtk(){ return MAAI_MOD[S.sword][S.maai].atk; }
+function maaiDef(){ return MAAI_MOD[S.sword][S.maai].def; }
+function effCost(card){ return card.cost + (card.magic ? 0 : S.sekinen); }
+function effSelf(card){ return card.selfDmg ? card.selfDmg + S.sekinen : 0; }
+function effHits(card){ return card.hits + (card.key==="nirenzashi" ? S.sekinen : 0); }
+function effDraw(card){ return card.draw ? card.draw + S.sekinen : 0; }
+function effBlock(card){ return card.block ? card.block + S.sekinen : 0; }
+function effHeal(card){ return card.heal ? card.heal + S.sekinen : 0; }
+function effStep(card){
+  if(!card.step) return 0;
+  return card.step > 0 ? card.step + S.sekinen : card.step - S.sekinen;
+}
+function effKakugoLoss(card){ return card.kakugoLoss ? card.kakugoLoss + S.sekinen : 0; }
+function effBase(card){
+  if(card.kind==="kaishaku") return S.bloodSpent * (1 + S.sekinen);
+  const b = card.special==="ugachi" ? Math.ceil((S.pMax - S.pHp)/2) : card.dmg;
+  return b + (card.magic ? 0 : S.sekinen);
+}
+function atkBonus(){ return S.martyr + S.bless + S.mikiri + oathAtk() + kakugoAtk() + maaiAtk(); }
+function gainBlock(n){
+  let v = Math.max(0, n + maaiDef());
+  if(S.oath==="syura") v = Math.ceil(v/2);
+  S.pBlock += v;
+  return v;
+}
+function enemyVolley(mv){
+  return mv.reload ? 0 : mv.atk * (mv.hits||1) + S.rage + S.fury;
+}
+function advanceFireDmg(){
+  const mv = ENEMY_PATTERN[S.patIdx];
+  if(mv.reload || S.enemyStaggered) return 0;
+  return Math.ceil(enemyVolley(mv) * 0.5);
+}
+
+/* ════════════════ ターン進行 ════════════════ */
+function startTurn(){
+  S.energy = S.energyMax;
+  S.pBlock = 0;
+  S.tagiri = 0;
+  S.combo = 0;
+  S.turnDmg = 0;
+  endArmed = false;
+  drawCards(5);
+  showBanner(S.turn + " 太刀目", "");
+  log("── " + S.turn + " 太刀目 ──","sys");
+  render();
+}
+
+function drawCards(n){
+  let drew = 0;
+  for(let i=0;i<n;i++){
+    if(S.deck.length===0){
+      if(S.discard.length===0) break;
+      S.deck = shuffle(S.discard); S.discard = [];
+      log("捨て札を切り直した。","sys");
+    }
+    S.hand.push(S.deck.pop());
+    drew++;
+  }
+  if(drew>0) sfx("draw");
+}
+
+function endTurn(){
+  if(busy) return;
+  const canStillPlay = S.energy > 0 && S.hand.some(k => isPlayable(CARDS[k]));
+  if(canStillPlay && !endArmed){
+    endArmed = true;
+    render();
+    return;
+  }
+  endArmed = false;
+  busy = true; armedIdx = -1;
+  S.discard.push(...S.hand);
+  S.hand = [];
+  if(S.turnDmg > 0) showTurnTotal(S.turnDmg);
+  if(S.oath==="fusyaku" && S.pHp > 1){
+    const d = Math.min(2, S.pHp - 1);
+    log("誓いが血を求める(HP -" + d + ")", "dmg");
+    loseHP(d, "oath");
+  }
+  showBanner("敵 ノ 手 番", "foe");
+  render();
+  setTimeout(enemyAct, 850);
+}
+
+function enemyAct(){
+  const move = ENEMY_PATTERN[S.patIdx];
+  if(S.enemyStaggered){
+    // 怯み: 動けない。回復時に激昂する
+    log("銃士は体勢を崩している──動けない!", "gold");
+    S.enemyStaggered = false;
+    S.fury += 3;
+    document.getElementById("enemy").classList.remove("staggerVis");
+    log("銃士が立ち上がる。眼の色が変わった──激昂(以降の攻撃 +" + S.fury + ")", "dmg");
+    if(S.staggered25 && !S.enraged){
+      S.enraged = true;
+      log("銃士は装填を捨てた──撃ち続ける気だ!", "dmg");
+    }
+    // 怯み中は後退もしない(詰め放題)
+  } else if(move.reload){
+    sfx("reload");
+    log("銃士は弾を込めている──撃ってこない。", "sys");
+    retreatEnemy();
+    advancePattern();
+  } else {
+    const hits = move.hits || 1;
+    let atk = enemyVolley(move);
+    if(S.sword==="long"){ atk = Math.max(0, atk - 2); }
+    const blockBefore = S.pBlock;
+    const just = atk > 0 && blockBefore === atk;   // 見切り: ぴったり同値
+    const blocked = Math.min(S.pBlock, atk);
+    const rem = atk - blocked;
+    for(let h=0; h<hits; h++){
+      setTimeout(()=>{ muzzleFlash(); sfx("gunshot"); }, h*150);
+    }
+    log("銃士の「" + move.name + "」! " + atk + " の銃弾" +
+        (hits>1 ? "(" + move.atk + "×" + hits + "連射)" : "") +
+        (S.sword==="long" ? "(長剣が弾を弾いた)" : ""), "dmg");
+    if(blocked>0) log("ブロックで " + blocked + " を受け止めた。");
+    S.pBlock -= blocked;
+    if(just){
+      S.mikiri += 5;
+      S.mikiriCount++;
+      sfx("parry");
+      goldFlash();
+      vibrate([20,30,20,30,60]);
+      showBanner("見 切 ッ タ", "mikiri");
+      log("一弾も余さず、ぴたりと受けた──見切り! 次の攻撃 +5", "mikiri");
+    }
+    if(rem>0){
+      const lost = loseHP(rem, "enemy");
+      if(lost > 0) popDamage(document.getElementById("player"), "-"+lost, "hurt");
+      else popDamage(document.getElementById("player"), "防", "heal");
+    } else if(blocked>0 || atk===0){
+      if(!just) popDamage(document.getElementById("player"), "防", "heal");
+    }
+    shakeScreen(false);
+    retreatEnemy();
+    advancePattern();
+  }
+  if(checkEnd()) return;
+  S.turn++;
+  busy = false;
+  startTurn();
+}
+
+function retreatEnemy(){
+  if(S.maai > 0){
+    S.maai--;
+    log("銃士が飛び退き、間合いを切った──「" + MAAI[S.maai].name + "」", "sys");
+  }
+}
+
+function advancePattern(){
+  S.patIdx++;
+  if(S.patIdx >= ENEMY_PATTERN.length){
+    S.patIdx = 0; S.loop++;
+    S.rage = S.loop * 2;
+    log("銃士の焦りが引き金に乗る…(以降の攻撃 +" + S.rage + ")", "dmg");
+  }
+  // 激昂後は装填を捨てる
+  if(S.enraged && ENEMY_PATTERN[S.patIdx].reload){
+    S.patIdx++;
+    if(S.patIdx >= ENEMY_PATTERN.length){
+      S.patIdx = 0; S.loop++;
+      S.rage = S.loop * 2;
+      log("銃士の焦りが引き金に乗る…(以降の攻撃 +" + S.rage + ")", "dmg");
+    }
+  }
+}
+
+/* ════════════════ 間合い移動 ════════════════ */
+function stepIn(n){
+  for(let i=0;i<n;i++){
+    if(S.maai >= MAAI.length-1){
+      log("これ以上は詰められない。","sys");
+      break;
+    }
+    let dmg = advanceFireDmg();
+    if(dmg <= 0){
+      S.maai++;
+      sfx("step");
+      vibrate(15);
+      log((S.enemyStaggered ? "銃士は怯んでいる" : "銃士は装填中") + "──無傷で詰めた!「" + MAAI[S.maai].name + "」", "gold");
+      continue;
+    }
+    muzzleFlash();
+    sfx("gunshot");
+    vibrate([25,20,35]);
+    const blocked = Math.min(S.pBlock, dmg);
+    S.pBlock -= blocked; dmg -= blocked;
+    S.maai++;
+    log("踏み込んだ──「" + MAAI[S.maai].name + "」。銃火が走る!", "gold");
+    if(blocked>0) log("ブロックで " + blocked + " を受け止めた。");
+    if(dmg > 0){
+      const cap = Math.max(0, S.pHp - 1);
+      const actual = Math.min(dmg, cap + S.tagiri);
+      if(actual > 0){
+        const lost = loseHP(Math.min(dmg, actual), "advance");
+        if(lost > 0) popDamage(document.getElementById("player"), "-"+lost, "hurt");
+      }
+    } else {
+      popDamage(document.getElementById("player"), "防", "heal");
+    }
+  }
+}
+function stepBack(n){
+  let moved = 0;
+  for(let i=0;i<n;i++){
+    if(S.maai <= 0) break;
+    S.maai--; moved++;
+  }
+  if(moved > 0){
+    sfx("step");
+    log("間を切った──「" + MAAI[S.maai].name + "」", "sys");
+  }
+}
+
+/* ════════════════ カードプレイ ════════════════ */
+function canPay(card){
+  const cost = effCost(card);
+  if(S.energy >= cost) return {ok:true, blood:0};
+  const lack = cost - S.energy;
+  const bloodCost = lack * BLOOD_RATE;
+  if(S.pHp > bloodCost) return {ok:true, blood:bloodCost};
+  return {ok:false, blood:bloodCost};
+}
+
+function isPlayable(card){
+  let selfCut = effSelf(card);
+  if(card.sword==="dagger" && S.sword!=="dagger") selfCut += 1;
+  if(selfCut > 0 && S.pHp <= selfCut && S.tagiri < selfCut) return false;
+  return canPay(card).ok;
+}
+
+function clickCard(idx){
+  if(busy) return;
+  const key = S.hand[idx];
+  const card = CARDS[key];
+  if(!isPlayable(card)){
+    if((card.selfDmg||0) > 0 || card.sword==="dagger") log("まだ死ねない。その血は払えぬ。","sys");
+    else log("気力も血も足りない。","sys");
+    return;
+  }
+  const pay = canPay(card);
+  if(pay.blood > 0 && armedIdx !== idx){
+    armedIdx = idx;
+    render();
+    return;
+  }
+  armedIdx = -1;
+  flyCard(idx);
+  playCard(idx, pay);
+}
+
+function playCard(idx, pay){
+  vibrate(12);
+  endArmed = false;
+  S.combo++;
+  if(S.combo >= 2) showCombo(S.combo);
+  const key = S.hand.splice(idx,1)[0];
+  const card = CARDS[key];
+  S.discard.push(key);
+
+  if(card.sword && card.sword !== S.sword){
+    setStance(card.sword);
+    if(checkEnd()) return;
+  }
+  S.swordUse[S.sword]++;
+  S.maaiSum += S.maai; S.maaiN++;
+  if(S.maai === 3) S.maaiShichiN++;
+
+  const cost = effCost(card);
+  const energyUsed = Math.min(S.energy, cost);
+  S.energy -= energyUsed;
+  if(pay.blood > 0){
+    S.bloodPays++;
+    log("気力が足りぬ…己の血で払う(HP -" + pay.blood + ")", "dmg");
+    loseHP(pay.blood, "blood");
+  }
+  log("「" + card.name + "」");
+
+  if(card.selfDmg){
+    loseHP(effSelf(card), "self");
+  }
+
+  const st = effStep(card);
+  if(st > 0){ stepIn(st); if(checkEnd()) return; }
+
+  if(card.kind === "attack"){
+    const base = effBase(card);
+    const hits = effHits(card);
+    const bonus = atkBonus();
+    const per = Math.max(0, base + bonus);
+    const total = per * hits;
+    if(S.martyr>0){ log("痛みが刃に変わる(+" + S.martyr + ")", "dmg"); }
+    if(S.mikiri>0){ log("見切りが刃を導く(+" + S.mikiri + ")", "mikiri"); }
+    if(S.bless>0){ log("祝福が宿る(+" + S.bless + ")", "gold"); }
+    if(maaiAtk()!==0){ log("間合い「" + MAAI[S.maai].name + "」(" + (maaiAtk()>0?"+":"") + maaiAtk() + ")", maaiAtk()>0?"dmg":"sys"); }
+    if(per===0){ log("……届かない。" + SWORDS[S.sword].name + "はこの間合いでは無力だ。", "sys"); }
+    const boosted = bonus > 0;
+    S.martyr = 0; S.mikiri = 0;
+    dealToEnemy(total, hits, per, boosted, pay.blood > 0);
+    if(pay.blood > 0 && S.sword==="spear"){
+      log("血で払った技は滾らない。槍は臆病者のための武器だ。", "sys");
+    }
+  }
+  if(card.block){
+    const v = gainBlock(effBlock(card));
+    popDamage(document.getElementById("player"), "盾+" + v, "heal");
+    log("ブロック " + v + " を得た。" +
+        (maaiDef()>0 ? "(遠間が守りを固めた+" + maaiDef() + ")" : (maaiDef()<0 ? "(間合いが近く守りが薄い" + maaiDef() + ")" : "")) +
+        (S.oath==="syura" ? "(誓いが半減)" : ""));
+  }
+  if(card.heal){
+    const h = effHeal(card);
+    S.pHp = Math.min(S.pMax, S.pHp + h);
+    const kl = effKakugoLoss(card);
+    if(kl > 0){ S.bloodSpent = Math.max(0, S.bloodSpent - kl); }
+    sfx("heal");
+    popDamage(document.getElementById("player"), "+" + h, "heal");
+    log("傷口に晒を巻いた(HP +" + h + ")。覚悟が " + kl + " 鈍った。", "heal");
+  }
+  if(st < 0){ stepBack(-st); }
+
+  if(card.magic && key === "seikon"){
+    const lost = S.pHp - 1;
+    if(lost > 0){
+      S.bless += lost;
+      sfx("seikon");
+      loseHP(lost, "seikon");
+      popDamage(document.getElementById("player"), "祝福+" + lost, "boost");
+      log("全身が裂け、" + lost + " の祝福が刻まれた。攻撃 +" + lost + "(永続)", "gold");
+    } else {
+      log("もはや捧げる血が残っていない。","sys");
+    }
+  }
+  if(card.magic && key === "sekinen"){
+    S.sekinen += 1;
+    sfx("seikon");
+    popDamage(document.getElementById("player"), "積年+" + S.sekinen, "boost");
+    log("錆は等しく、すべてに積もる。カードの数字がすべて +" + S.sekinen + " された。", "gold");
+  }
+  if(card.magic && key === "kawaki"){
+    S.tagiriMult *= 2;
+    sfx("seikon");
+    popDamage(document.getElementById("player"), "渇き ×" + S.tagiriMult, "tagiri");
+    log("渇きは増すばかり──滾りの獲得が " + S.tagiriMult + " 倍になった。", "tagiri");
+  }
+  if(card.draw){
+    drawCards(effDraw(card));
+  }
+
+  if(checkEnd()) return;
+  render();
+}
+
+function playKaishaku(){
+  if(busy || S.kaishakuUsed || S.kakugoRank < 3) return;
+  const pay = canPay(KAI_CARD);
+  if(!pay.ok){ log("気力も血も足りない。","sys"); return; }
+  busy = true;
+  S.kaishakuUsed = true;
+  endArmed = false;
+  const cost = effCost(KAI_CARD);
+  const energyUsed = Math.min(S.energy, cost);
+  S.energy -= energyUsed;
+  if(pay.blood > 0){
+    S.bloodPays++;
+    log("気力が足りぬ…己の血で払う(HP -" + pay.blood + ")", "dmg");
+    loseHP(pay.blood, "blood");
+  }
+  render();
+  const wrap = document.getElementById("kaiWrap");
+  const slash = document.getElementById("kaiSlash");
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const y1 = vh * 0.64, y2 = vh * 0.34;
+  const ang = Math.atan2(y2 - y1, vw) * 180 / Math.PI;
+  slash.style.top = y1 + "px";
+  slash.style.width = Math.hypot(vw, y2 - y1) + "px";
+  slash.style.setProperty("--kang", ang + "deg");
+  wrap.className = "on";
+  void wrap.offsetWidth;
+  wrap.classList.add("dark");
+  sfx("kaiDark");
+  setTimeout(()=>{
+    wrap.classList.add("flash");
+    sfx("kaiSlash");
+    vibrate([60,30,140]);
+  }, 380);
+  setTimeout(()=>{
+    wrap.classList.add("split");
+    const dmg = S.bloodSpent * (1 + S.sekinen);
+    showBanner("介 錯 一 閃", "rankup");
+    log("流したすべての血が、一太刀に宿る" + (S.sekinen>0 ? "(積年 ×" + (1+S.sekinen) + ")" : "") + "。", "gold");
+    dealToEnemy(dmg, 1, dmg, true, true);
+    if(S.eHp === 0) S.wonByKai = true;
+    busy = false;
+    if(!checkEnd()) render();
+  }, 700);
+  setTimeout(()=>{ wrap.className = ""; }, 1400);
+}
+
+function setStance(id){
+  S.sword = id;
+  vibrate([15,30,15]);
+  sfx("gacha");
+  log("ガチャッ ──「" + SWORDS[id].name + "」を抜いた。", "gold");
+  if(id==="long"){
+    const v = gainBlock(2);
+    log("抜刀: ブロック " + v + "。");
+  }
+  if(id==="dagger"){
+    if(S.pHp > 1){
+      log("抜刀: 覚悟の皮一枚(HP -1)。");
+      loseHP(1, "self");
+    }
+  }
+  if(id==="spear"){
+    log("抜刀: 穂先が走る。");
+    dealToEnemy(2, 1, 2, false, true);
+  }
+  render();
+  const el = document.querySelector(".sword.active");
+  if(el){ el.classList.add("drawn"); setTimeout(()=>el.classList.remove("drawn"), 320); }
+}
+
+function dealToEnemy(total, hits, per, boosted, noTagiri){
+  const before = S.eHp;
+  S.eHp = Math.max(0, S.eHp - total);
+  S.turnDmg += total;
+  if(total > S.maxHit) S.maxHit = total;
+  if(before > 0 && S.eHp === 0){
+    S.overkill = total - before;
+  }
+  if(S.sword==="spear" && total > 0 && !noTagiri){
+    const t = Math.floor(total * 0.25 * S.tagiriMult);
+    if(t > 0){
+      S.tagiri += t;
+      log("血が滾る(+" + t + ")", "tagiri");
+    }
+  }
+  const en = document.getElementById("enemy");
+  const mega = per >= 18;
+  for(let h=0; h<hits; h++){
+    setTimeout(()=>{
+      popDamage(en, per, (mega ? "boost mega" : (boosted ? "boost" : "")));
+      sfx(mega ? "mega" : "slash", S.combo);
+      spawnSlashFX(S.sword);
+      en.classList.remove("punch"); void en.offsetWidth; en.classList.add("punch");
+      en.classList.add("hitflash");
+      setTimeout(()=>en.classList.remove("hitflash"), 90);
+    }, h * 130);
+  }
+  if(mega || total >= 20){ hitStop(total >= 30 ? 95 : 70); }
+  if(total >= 20){ shakeScreen(true); vibrate([40,30,60]); }
+  log("銃士に " + total + " ダメージ" + (hits>1 ? "(" + hits + "連撃)" : "") + "!", "dmg");
+  // 体幹崩し: HP50% / 25% を割った瞬間に怯む
+  if(before > 0 && S.eHp > 0){
+    let stag = false;
+    if(!S.staggered50 && S.eHp <= S.eMax*0.5){ S.staggered50 = true; stag = true; }
+    if(!S.staggered25 && S.eHp <= S.eMax*0.25){ S.staggered25 = true; stag = true; }
+    if(stag) doStagger();
+  }
+}
+
+function doStagger(){
+  S.enemyStaggered = true;
+  sfx("stagger");
+  hitStop(110);
+  vibrate([50,40,90]);
+  showBanner("怯 ン ダ", "stagger");
+  document.getElementById("enemy").classList.add("staggerVis");
+  log("銃士の体幹が崩れた──次の手番、撃てない! 後退もしない。踏み込みも無傷だ!", "gold");
+  log("……だが、立ち上がった奴は前より凶暴になる。", "sys");
+}
+
+/* ════════════════ HP喪失 ════════════════ */
+function loseHP(amount, source){
+  let amt = amount;
+  if(S.tagiri > 0 && source !== "seikon"){
+    const t = Math.min(S.tagiri, amt);
+    S.tagiri -= t; amt -= t;
+    if(t > 0){
+      log("滾りが " + t + " を喰い止めた。", "tagiri");
+      popDamage(document.getElementById("player"), "滾 -" + t, "tagiri");
+    }
+  }
+  if(amt <= 0){ render(); return 0; }
+  if(source==="advance"){ amt = Math.min(amt, Math.max(0, S.pHp - 1)); if(amt<=0){ render(); return 0; } }
+  S.pHp = Math.max(0, S.pHp - amt);
+  if(source==="enemy" || source==="advance") S.dmgTaken += amt;
+  bloodFlash();
+  const intensity = source==="seikon" ? 3 : (amt>=6 ? 2 : 1);
+  spawnBlood(intensity);
+  spawnDrips();
+  if(source!=="enemy" && source!=="advance") sfx("blood");
+  if(source==="enemy") playerHurtFX();
+  vibrate(source==="seikon" ? [60,40,100] : [20 + amt*4]);
+  if(S.sword === "dagger" && S.pHp > 0){
+    S.martyr += 3;
+    log("殉教者の短剣が疼く(次の攻撃 +" + S.martyr + ")", "dmg");
+  }
+  if(source!=="enemy"){
+    S.bloodSpent += amt;
+    checkKakugo();
+  }
+  return amt;
+}
+
+function checkKakugo(){
+  let newRank = S.kakugoRank;
+  for(let i=0;i<RANKS.length;i++){
+    if(S.bloodSpent >= RANKS[i].need && i+1 > newRank) newRank = i+1;
+  }
+  while(S.kakugoRank < newRank){
+    S.kakugoRank++;
+    const r = RANKS[S.kakugoRank-1];
+    if(S.kakugoRank===2){ S.energyMax++; S.energy++; }
+    goldFlash();
+    sfx("rankup");
+    vibrate([30,40,30,40,80]);
+    showBanner("位 " + "一二三"[S.kakugoRank-1] + "「" + r.name + "」", "rankup");
+    log("覚悟が位に達した──「" + r.name + "」: " + r.effect + "(下位の恩恵もすべて乗る)", "gold");
+  }
+}
+
+function playerHurtFX(){
+  const fill = document.getElementById("playerHpFill");
+  fill.classList.remove("hurtSeq"); void fill.offsetWidth;
+  fill.classList.add("hurtSeq");
+  setTimeout(()=>fill.classList.remove("hurtSeq"), 2100);
+}
+
+/* ════════════════ 終了判定・称号 ════════════════ */
+function checkEnd(){
+  if(S.eHp <= 0){ showEnd(true); return true; }
+  if(S.pHp <= 0){ showEnd(false); return true; }
+  return false;
+}
+
+function battleStats(){
+  const avgIdx = S.maaiN > 0 ? Math.round(S.maaiSum / S.maaiN) : 1;
+  const fav = Object.keys(S.swordUse).reduce((a,b)=>S.swordUse[a]>=S.swordUse[b]?a:b);
+  return {
+    avgIdx: avgIdx,
+    avgMaai: MAAI[Math.min(MAAI.length-1, Math.max(0, avgIdx))].name,
+    favSword: S.maaiN > 0 ? SWORDS[fav].name : "──",
+    shichiRate: S.maaiN > 0 ? S.maaiShichiN / S.maaiN : 0,
+  };
+}
+
+function earnTitle(win){
+  const st = battleStats();
+  if(win && S.wonByKai) return "介錯人";
+  if(st.shichiRate >= 0.7) return "死人剣士";
+  if(win && S.dmgTaken === 0) return "弾の間を歩く者";
+  if(st.favSword === "吸血の槍" && st.avgIdx <= 1) return "臆病者の槍聖";
+  if(S.bloodPays >= 6) return "血染めの放蕩者";
+  if(S.mikiriCount >= 2) return "見切りの達人";
+  return win ? "咎人の騎士" : "届かざる者";
+}
+
+function buildShareText(win, title){
+  const oath = S.oath ? OATHS[S.oath].name : "";
+  const rank = S.kakugoRank > 0 ? "覚悟・" + RANKS[S.kakugoRank-1].name : "覚悟・無位";
+  const st = battleStats();
+  if(win){
+    return "【ハラキリセイバー】俺は血を" + S.bloodSpent + "流して辿り着いた。\n" +
+           "称号「" + title + "」 / " + S.turn + "太刀目 / " + rank +
+           " / 最大の一撃 " + S.maxHit +
+           (S.overkill > 0 ? " / オーバーキル " + S.overkill : "") +
+           " / 愛刀:" + st.favSword +
+           " / " + oath + "\n#ハラキリセイバー";
+  }
+  return "【ハラキリセイバー】血を" + S.bloodSpent + "流し、王の御前に届かず野に果てた。\n称号「" + title + "」(" + S.turn + "太刀目 / " + rank + " / " + oath + ")\n#ハラキリセイバー";
+}
+
+function killFX(){
+  const kf = document.getElementById("killflash");
+  kf.classList.remove("on"); void kf.offsetWidth; kf.classList.add("on");
+  const z = document.getElementById("zan");
+  z.classList.remove("on"); void z.offsetWidth; z.classList.add("on");
+  sfx("mega");
+  hitStop(130);
+  vibrate([60,50,150]);
+  shakeScreen(true);
+}
+
+function showEnd(win){
+  busy = true;
+  render();
+  setTaiko(0);
+  if(win) killFX();
+  sfx(win ? "win" : "lose");
+  const t = document.getElementById("overlayTitle");
+  const st = document.getElementById("overlayStats");
+  t.textContent = win ? "勝利" : "落命";
+  t.className = win ? "win" : "lose";
+  const title = earnTitle(win);
+  document.getElementById("earnedTitle").textContent = "称号「" + title + "」";
+  const bs = battleStats();
+  const cu = (v)=>'<b class="cu" data-v="' + v + '">0</b>';
+  st.innerHTML = win
+    ? "銃士を退け、道はまだ続く。<br>経過: " + cu(S.turn) + " 太刀目 ／ 残り HP: " + cu(S.pHp) + " / " + S.pMax +
+      "<br>自ら流した血: " + cu(S.bloodSpent) + " ／ 刻まれた祝福: " + cu(S.bless) +
+      "<br>最大の一撃: " + cu(S.maxHit) + " ／ 平均間合: <b>" + bs.avgMaai + "</b> ／ 愛刀: <b>" + bs.favSword + "</b>"
+    : "腹を切る前に、銃弾に果てた。<br>これでは「逃げた」ことにされてしまう──。<br>経過: " + cu(S.turn) +
+      " 太刀目 ／ 自ら流した血: " + cu(S.bloodSpent) +
+      "<br>最大の一撃: " + cu(S.maxHit) + " ／ 平均間合: <b>" + bs.avgMaai + "</b> ／ 愛刀: <b>" + bs.favSword + "</b>";
+  document.getElementById("overkillLine").innerHTML =
+    (win && S.overkill > 0) ? 'オーバーキル <b class="cu" data-v="' + S.overkill + '">0</b>' : "";
+  const text = buildShareText(win, title);
+  document.getElementById("shareTxt").textContent = text;
+  document.getElementById("shareXBtn").onclick = ()=>{
+    window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank");
+  };
+  const cb = document.getElementById("shareCopyBtn");
+  cb.textContent = "文をコピー";
+  cb.onclick = ()=>{
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(()=>{ cb.textContent = "コピーした"; });
+    }
+  };
+  setTimeout(()=>{
+    document.getElementById("overlay").classList.add("show");
+    runCountUps();
+  }, win ? 1250 : 700);
+}
+
+/* リザルトのカウントアップ */
+function runCountUps(){
+  const els = document.querySelectorAll("#overlay .cu");
+  els.forEach((el, i)=>{
+    const target = parseInt(el.dataset.v, 10) || 0;
+    const dur = 750;
+    const start = performance.now() + i * 90;
+    function tick(now){
+      const p = Math.min(1, (now - start) / dur);
+      if(p <= 0){ requestAnimationFrame(tick); return; }
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased);
+      if(p < 1) requestAnimationFrame(tick);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ════════════════ 描画 ════════════════ */
+function buildCardEl(c, opts){
+  const div = document.createElement("div");
+  let cls = "card";
+  if(c.magic) cls += " magic";
+  if(c.kind==="kaishaku") cls += " kai";
+  if(opts.unplayable) cls += " unplayable";
+  if(opts.bloodNeed) cls += " bloodNeed";
+  if(opts.armed) cls += " armed";
+  div.className = cls;
+  const swName = {long:"長剣技", dagger:"短剣技", spear:"槍技"};
+  let typeLabel = c.kind==="kaishaku" ? "必殺・覚悟の証"
+                : c.magic ? "魔法・" + swName[c.sword]
+                : (c.sword ? swName[c.sword] : "共通技");
+  if(opts.willSwitch) typeLabel += ' <span class="sw">⇒抜刀</span>';
+  let stepLine = "";
+  const st = effStep(c);
+  if(st > 0) stepLine = '<div class="cStep">踏み込み ' + st + '(銃火 ' + advanceFireDmg() + '×' + st + ')</div>';
+  if(st < 0) stepLine = '<div class="cStep back">一歩退く(' + (-st) + ')</div>';
+  let calc = "";
+  if(c.kind === "attack" || c.kind === "kaishaku"){
+    let per;
+    if(c.kind === "kaishaku"){
+      per = effBase(c);
+    } else {
+      const sid = c.sword || S.sword;
+      const pm = Math.min(MAAI.length - 1, S.maai + Math.max(0, effStep(c)));
+      per = Math.max(0, effBase(c) + S.martyr + S.bless + S.mikiri + oathAtk() + kakugoAtk() + MAAI_MOD[sid][pm].atk);
+    }
+    const hits = effHits(c);
+    const cls2 = per > effBase(c) || (c.kind==="kaishaku" && S.sekinen>0) ? "up" : "";
+    calc = '<div class="cCalc ' + cls2 + '">今撃てば <b>' + per + (hits>1 ? "×" + hits : "") + "</b></div>";
+  }
+  if(c.block){
+    const v0 = Math.max(0, effBlock(c) + maaiDef());
+    const v = S.oath==="syura" ? Math.ceil(v0/2) : v0;
+    const cls3 = maaiDef() > 0 ? "up" : "";
+    calc = '<div class="cCalc ' + cls3 + '">今守れば <b>' + v + "</b></div>";
+  }
+  div.innerHTML = '<div class="cost">' + effCost(c) + '</div>' +
+                  '<div class="cName">' + c.name + '</div>' +
+                  '<div class="cType">' + typeLabel + '</div>' +
+                  '<div class="cDesc">' + c.desc + "</div>" + stepLine + calc +
+                  '<div class="cNote">' + (opts.note||"") + "</div>";
+  return div;
+}
+
+function render(){
+  document.getElementById("turnLabel").textContent = S.turn + " 太刀目";
+  document.getElementById("enemyHpFill").style.width = (S.eHp/S.eMax*100)+"%";
+  document.getElementById("enemyHpGhost").style.width = (S.eHp/S.eMax*100)+"%";
+  document.getElementById("enemyHpText").textContent = S.eHp + " / " + S.eMax;
+  const mv = ENEMY_PATTERN[S.patIdx];
+  let atk = 0, through = 0;
+  if(S.enemyStaggered){
+    document.getElementById("enemyIntent").innerHTML =
+      '次手: <span class="stag">怯み──動けない(斬り時!)</span>';
+  } else if(mv.reload){
+    document.getElementById("enemyIntent").innerHTML =
+      '次手: 装填 <span class="safe">(撃ってこない──詰め時)</span>';
+  } else {
+    atk = enemyVolley(mv);
+    if(S.sword==="long") atk = Math.max(0, atk - 2);
+    through = Math.max(0, atk - S.pBlock - S.tagiri);
+    const predict = (S.pBlock > 0 || S.tagiri > 0)
+      ? (through > 0 ? ' <span class="pierce">(素通し ' + through + ')</span>'
+                     : (S.pBlock === atk ? ' <span class="safe">(ぴったり──見切れる!)</span>' : ' <span class="safe">(防ぎ切る)</span>'))
+      : "";
+    document.getElementById("enemyIntent").innerHTML =
+      "次手: " + mv.name + " <b>" + atk + "</b>" + ((mv.hits||1)>1 ? '<span style="font-size:.7rem">(' + mv.atk + "×" + mv.hits + ")</span>" : "") + predict;
+  }
+  document.getElementById("enemyLoop").textContent =
+    (S.rage>0 ? "焦燥 +" + S.rage + " " : "") + (S.fury>0 ? "激昂 +" + S.fury : "");
+  // 間合い
+  const m = MAAI[S.maai];
+  const mm = MAAI_MOD[S.sword][S.maai];
+  const maaiEl = document.getElementById("maai");
+  maaiEl.classList.toggle("shichi", S.maai === 3);
+  document.getElementById("maaiName").textContent = m.name;
+  document.getElementById("maaiMods").innerHTML =
+    SWORDS[S.sword].type + ': <span class="ga">刃 ' + (mm.atk>=0?"+":"") + mm.atk + '</span> ／ <span class="mo">守 ' + (mm.def>=0?"+":"") + mm.def + "</span>";
+  document.getElementById("maaiKnight").style.left = m.pos + "%";
+  document.getElementById("maaiHint").innerHTML =
+    '攻撃カードは踏み込み、防御カードは間を切る。踏み込めば<span class="fire">銃火 ' + advanceFireDmg() + '</span> を浴びる。';
+  // 自分
+  document.getElementById("playerHpFill").style.width = (S.pHp/S.pMax*100)+"%";
+  document.getElementById("playerHpGhost").style.width = (S.pHp/S.pMax*100)+"%";
+  const low = S.pHp <= S.pMax*0.25;
+  const threat = document.getElementById("hpThreat");
+  if(through > 0 && S.pHp > 0 && !busy){
+    const afterHp = Math.max(0, S.pHp - through);
+    threat.style.display = "block";
+    threat.style.left  = (afterHp/S.pMax*100)+"%";
+    threat.style.width = ((S.pHp-afterHp)/S.pMax*100)+"%";
+    threat.classList.toggle("lethal", through >= S.pHp);
+  } else {
+    threat.style.display = "none";
+  }
+  document.getElementById("dimEdges").classList.toggle("low", low && S.pHp>0);
+  document.getElementById("playerHpText").innerHTML =
+    low ? '<span class="lowHp">' + S.pHp + " / " + S.pMax + " ── 瀕死</span>"
+        : S.pHp + " / " + S.pMax;
+  document.getElementById("vignette").classList.toggle("low", low && S.pHp>0);
+  setHeartbeat(low && S.pHp>0 && !busy);
+  // アドレナリン: 覚悟最大 > 死地 > 通常
+  const adre = S.pHp>0 ? (S.bloodSpent >= KAKUGO_MAX ? 2 : (S.maai===3 ? 1 : 0)) : 0;
+  document.body.classList.toggle("adre1", adre===1);
+  document.body.classList.toggle("adre2", adre===2);
+  setTaiko(busy ? 0 : adre);
+  document.getElementById("kakugoBar").classList.toggle("maxed", S.bloodSpent >= KAKUGO_MAX);
+  document.getElementById("playerBlock").innerHTML =
+    S.pBlock>0 ? '<span class="blockBadge">盾 ' + S.pBlock + "</span>" : "";
+  document.getElementById("playerTagiri").innerHTML =
+    S.tagiri>0 ? '<span class="tagiriBadge">滾り ' + S.tagiri + "</span>" : "";
+  document.getElementById("kakugoVal").textContent = S.bloodSpent;
+  document.getElementById("kakugoRankName").textContent =
+    S.kakugoRank>0 ? "位" + "一二三"[S.kakugoRank-1] + "「" + RANKS[S.kakugoRank-1].name + "」" : "無位";
+  document.getElementById("kakugoFill").style.width =
+    Math.min(100, S.bloodSpent / KAKUGO_MAX * 100) + "%";
+  const br = document.getElementById("buffRow");
+  br.innerHTML = "";
+  if(S.martyr>0){
+    const grown = S.martyr > lastMartyr;
+    br.innerHTML += '<span class="buff martyr' + (grown?" pulse":"") + '">殉教 次の攻撃 +' + S.martyr + "</span>";
+  }
+  lastMartyr = S.martyr;
+  if(S.mikiri>0) br.innerHTML += '<span class="buff mikiri">見切り 次の攻撃 +' + S.mikiri + "</span>";
+  if(S.bless>0) br.innerHTML += '<span class="buff bless">祝福 攻撃 +' + S.bless + "(永続)</span>";
+  if(S.kakugoRank>0) br.innerHTML += '<span class="buff kakugo">覚悟 攻撃+' + kakugoAtk() + (S.kakugoRank>=2 ? "・気力+1" : "") + "</span>";
+  if(S.sekinen>0) br.innerHTML += '<span class="buff bless">積年 全数字 +' + S.sekinen + "</span>";
+  if(S.tagiriMult>1) br.innerHTML += '<span class="buff" style="border:1px solid var(--tagiri);color:#6fd0b4;">渇き 滾り ×' + S.tagiriMult + "</span>";
+  if(S.oath) br.innerHTML += '<span class="buff oath">' + OATHS[S.oath].name + "</span>";
+  let pips = "";
+  for(let i=0;i<S.energyMax;i++)
+    pips += '<span class="pip ' + (i<S.energy?"full":"empty") + '" style="display:inline-block;margin-right:4px;"></span>';
+  document.getElementById("pips").innerHTML = pips;
+  document.getElementById("bloodHint").textContent =
+    S.energy===0 ? "気力が尽きた。あとは血で払うのみ。" : "";
+  const sw = document.getElementById("swords");
+  sw.innerHTML = "";
+  for(const id of ["long","dagger","spear"]){
+    const s = SWORDS[id];
+    const prof = MAAI_MOD[id].map((x,i)=>MAAI[i].name.charAt(0) + (x.atk>=0?"+":"") + x.atk).join(" ");
+    const div = document.createElement("div");
+    div.className = "sword" + (S.sword===id ? " active":"");
+    div.innerHTML = '<div><span class="sName">' + s.name + '</span><span class="sType">' + s.type + '</span></div>' +
+                    '<div class="sPassive">' + s.passive + '<br>' + s.batto +
+                    '<br>間合補正(刃): ' + prof + "</div>";
+    sw.appendChild(div);
+  }
+  const hand = document.getElementById("hand");
+  hand.innerHTML = "";
+  if(S.kakugoRank >= 3 && !S.kaishakuUsed){
+    const pay = canPay(KAI_CARD);
+    const el = buildCardEl(KAI_CARD, {
+      unplayable: !pay.ok,
+      bloodNeed: pay.ok && pay.blood>0,
+      note: pay.ok && pay.blood>0 ? "血払い可: HP -" + pay.blood : "覚悟の一太刀。逃さぬ。",
+    });
+    el.onclick = playKaishaku;
+    hand.appendChild(el);
+  }
+  S.hand.forEach((key, idx)=>{
+    const c = CARDS[key];
+    const pay = canPay(c);
+    const playable = isPlayable(c);
+    let note = "";
+    if(armedIdx===idx) note = "もう一度タップで血払い(HP -" + pay.blood + ")";
+    else if(playable && pay.blood>0) note = "血払い可: HP -" + pay.blood;
+    else if(!playable && (c.selfDmg || c.sword==="dagger")) note = "血が足りない";
+    const el = buildCardEl(c, {
+      unplayable: !playable,
+      bloodNeed: playable && pay.blood>0,
+      armed: armedIdx===idx,
+      willSwitch: c.sword && c.sword !== S.sword,
+      note: note,
+    });
+    el.onclick = ()=>clickCard(idx);
+    hand.appendChild(el);
+  });
+  document.getElementById("deckBtn").textContent = "山札 " + S.deck.length;
+  document.getElementById("discardBtn").textContent = "捨て札 " + S.discard.length;
+  const btn = document.getElementById("endTurnBtn");
+  btn.disabled = busy;
+  btn.textContent = busy ? "敵 ノ 手 番 …"
+                  : (endArmed ? "気力残あり ── もう一度で終了" : "手 仕 舞");
+}
+
+/* ════════════════ 演出 ════════════════ */
+function log(msg, cls){
+  const el = document.getElementById("log");
+  const p = document.createElement("p");
+  if(cls) p.className = "l-"+cls;
+  p.textContent = msg;
+  el.prepend(p);
+}
+function bloodFlash(){
+  const f = document.getElementById("bloodflash");
+  f.classList.add("on");
+  setTimeout(()=>f.classList.remove("on"), 60);
+}
+function goldFlash(){
+  const f = document.getElementById("goldflash");
+  f.classList.add("on");
+  setTimeout(()=>f.classList.remove("on"), 120);
+}
+function muzzleFlash(){
+  const en = document.getElementById("enemy");
+  en.classList.add("muzzle");
+  setTimeout(()=>en.classList.remove("muzzle"), 80);
+}
+function hitStop(ms){
+  document.documentElement.classList.add("hitstop");
+  setTimeout(()=>document.documentElement.classList.remove("hitstop"), ms);
+}
+function vibrate(p){ if(navigator.vibrate) navigator.vibrate(p); }
+function spawnSlashFX(swordId){
+  const en = document.getElementById("enemy");
+  if(swordId === "long"){
+    const d = document.createElement("div");
+    d.className = "fx fxLong";
+    d.style.top = (38 + Math.random()*22) + "%";
+    en.appendChild(d);
+    setTimeout(()=>d.remove(), 350);
+  } else if(swordId === "dagger"){
+    for(let i=0;i<3;i++){
+      const d = document.createElement("div");
+      d.className = "fx fxDag";
+      d.style.left = (15 + Math.random()*60) + "%";
+      d.style.top  = (25 + Math.random()*50) + "%";
+      d.style.setProperty("--ang", (-50 + Math.random()*30) + "deg");
+      d.style.animationDelay = (i*45) + "ms";
+      en.appendChild(d);
+      setTimeout(()=>d.remove(), 420);
+    }
+  } else if(swordId === "spear"){
+    const d = document.createElement("div");
+    d.className = "fx fxSpear";
+    d.style.left = (30 + Math.random()*35) + "%";
+    d.style.top  = (35 + Math.random()*30) + "%";
+    en.appendChild(d);
+    setTimeout(()=>d.remove(), 350);
+  }
+}
+function showCombo(n){
+  const c = document.getElementById("comboPop");
+  c.textContent = n + " 連!";
+  c.style.fontSize = Math.min(2.6, 1.2 + n*0.18) + "rem";
+  c.classList.remove("on"); void c.offsetWidth; c.classList.add("on");
+}
+function showTurnTotal(v){
+  document.getElementById("turnTotalNum").textContent = v;
+  const t = document.getElementById("turnTotal");
+  t.classList.remove("on"); void t.offsetWidth; t.classList.add("on");
+  sfx("mega");
+}
+function spawnBlood(intensity){
+  const layer = document.getElementById("bloodLayer");
+  const n = intensity*3 + Math.floor(Math.random()*3);
+  for(let i=0;i<n;i++){
+    const d = document.createElement("div");
+    d.className = "splat";
+    const size = 14 + Math.random()*30*intensity;
+    d.style.width  = size+"px";
+    d.style.height = size*(0.65+Math.random()*0.5)+"px";
+    d.style.left = (5+Math.random()*88)+"vw";
+    d.style.top  = (12+Math.random()*68)+"vh";
+    d.style.setProperty("--rot",(Math.random()*360)+"deg");
+    layer.appendChild(d);
+    setTimeout(()=>d.remove(), 900);
+  }
+}
+function spawnDrips(){
+  const bar = document.getElementById("playerHpBar");
+  if(!bar) return;
+  const edge = S.pHp/S.pMax*100;
+  const n = 2 + Math.floor(Math.random()*2);
+  for(let i=0;i<n;i++){
+    const d = document.createElement("div");
+    d.className = "drip";
+    d.style.left = Math.max(2, Math.min(96, edge + (Math.random()*10 - 3)))+"%";
+    bar.appendChild(d);
+    setTimeout(()=>d.remove(), 1600);
+  }
+}
+function popDamage(targetEl, text, cls){
+  const r = targetEl.getBoundingClientRect();
+  const d = document.createElement("div");
+  d.className = "dmgPop " + (cls||"");
+  d.textContent = text;
+  d.style.left = (r.left + r.width*(0.3+Math.random()*0.4)) + "px";
+  d.style.top  = (r.top + r.height*0.3) + "px";
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(), 1050);
+}
+function showBanner(text, mode){
+  const b = document.getElementById("banner");
+  b.textContent = text;
+  b.className = mode || "";
+  void b.offsetWidth;
+  b.classList.add("show");
+  setTimeout(()=>b.classList.remove("show"), 1050);
+}
+function flyCard(idx){
+  const hand = document.getElementById("hand");
+  const offset = (S.kakugoRank >= 3 && !S.kaishakuUsed) ? 1 : 0;
+  const el = hand.children[idx + offset];
+  if(!el) return;
+  const r = el.getBoundingClientRect();
+  const c = el.cloneNode(true);
+  c.classList.add("cardFly");
+  c.style.left = r.left+"px"; c.style.top = r.top+"px";
+  c.style.width = r.width+"px"; c.style.height = r.height+"px";
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(), 400);
+}
+function shakeScreen(big){
+  const a = document.getElementById("app");
+  const cls = big ? "bigshake" : "shake";
+  a.classList.remove("shake","bigshake"); void a.offsetWidth; a.classList.add(cls);
+}
+
+/* ════════════════ 効果音(WebAudio) ════════════════ */
+let AC = null, muted = false, heartTimer = null, taikoTimer = null, taikoLevel = 0;
+function ac(){
+  if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  return AC;
+}
+function tone(ctx,t,freq,dur,type,vol,glideTo){
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  if(glideTo) o.frequency.exponentialRampToValueAtTime(glideTo,t+dur);
+  g.gain.setValueAtTime(vol,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.connect(g).connect(ctx.destination);
+  o.start(t); o.stop(t+dur+0.02);
+}
+function noiseBurst(ctx,t,dur,cutoff,vol){
+  const len=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,len,ctx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+  const s=ctx.createBufferSource(); s.buffer=buf;
+  const f=ctx.createBiquadFilter(); f.type="lowpass"; f.frequency.value=cutoff;
+  const g=ctx.createGain(); g.gain.value=vol;
+  s.connect(f); f.connect(g); g.connect(ctx.destination);
+  s.start(t);
+}
+function sfx(type, p){
+  if(muted) return;
+  const ctx = ac(); if(!ctx) return;
+  try{
+    if(ctx.state==="suspended") ctx.resume();
+    const t = ctx.currentTime;
+    if(type==="slash"){
+      const k = 1 + Math.min(p||0, 8) * 0.1;
+      noiseBurst(ctx,t,0.1,2200*k,0.45);
+      tone(ctx,t,1400*k,0.06,"triangle",0.12,500*k);
+    }
+    else if(type==="mega"){
+      noiseBurst(ctx,t,0.22,2600,0.6);
+      tone(ctx,t,180,0.3,"sawtooth",0.3,40);
+      tone(ctx,t+0.03,1800,0.1,"triangle",0.15,300);
+    }
+    else if(type==="gunshot"){
+      noiseBurst(ctx,t,0.08,5200,0.55);
+      tone(ctx,t,150,0.13,"square",0.3,45);
+      tone(ctx,t+0.01,2400,0.04,"sawtooth",0.1,700);
+      noiseBurst(ctx,t+0.05,0.18,900,0.18);
+    }
+    else if(type==="blood"){ tone(ctx,t,120,0.16,"sine",0.4,45); noiseBurst(ctx,t,0.1,420,0.25); }
+    else if(type==="gacha"){ tone(ctx,t,900,0.035,"square",0.13); tone(ctx,t+0.07,640,0.05,"square",0.13); }
+    else if(type==="reload"){
+      tone(ctx,t,500,0.04,"square",0.18);
+      noiseBurst(ctx,t+0.02,0.05,1200,0.2);
+      tone(ctx,t+0.16,380,0.05,"square",0.2);
+      noiseBurst(ctx,t+0.18,0.07,900,0.25);
+    }
+    else if(type==="step"){ noiseBurst(ctx,t,0.06,800,0.3); tone(ctx,t,220,0.07,"sine",0.2,120); }
+    else if(type==="heal"){ tone(ctx,t,520,0.1,"sine",0.18); tone(ctx,t+0.09,720,0.16,"sine",0.16); }
+    else if(type==="seikon"){ tone(ctx,t,62,0.9,"sine",0.55,28); noiseBurst(ctx,t,0.45,900,0.35); tone(ctx,t+0.1,310,0.5,"triangle",0.12,80); }
+    else if(type==="rankup"){
+      tone(ctx,t,70,1.1,"sine",0.5,40);
+      [392,523,659].forEach((f,i)=>tone(ctx,t+0.08+i*0.1,f,0.4,"triangle",0.18));
+    }
+    else if(type==="stagger"){
+      noiseBurst(ctx,t,0.16,700,0.5);
+      tone(ctx,t,420,0.3,"sawtooth",0.25,60);
+      tone(ctx,t+0.12,180,0.25,"square",0.18,50);
+    }
+    else if(type==="parry"){
+      tone(ctx,t,1850,0.5,"sine",0.25,1700);
+      tone(ctx,t,1855,0.5,"sine",0.18,1690);
+      noiseBurst(ctx,t,0.04,6000,0.25);
+    }
+    else if(type==="taiko"){
+      tone(ctx,t,82,0.18,"sine",0.4,42);
+      noiseBurst(ctx,t,0.05,260,0.2);
+    }
+    else if(type==="taiko2"){
+      tone(ctx,t,82,0.16,"sine",0.45,42);
+      noiseBurst(ctx,t,0.05,260,0.22);
+      tone(ctx,t+0.14,98,0.12,"sine",0.3,50);
+    }
+    else if(type==="kaiDark"){
+      tone(ctx,t,48,0.8,"sine",0.5,30);
+      noiseBurst(ctx,t,0.5,300,0.2);
+    }
+    else if(type==="kaiSlash"){
+      noiseBurst(ctx,t,0.28,3200,0.7);
+      tone(ctx,t,2200,0.14,"triangle",0.2,200);
+      tone(ctx,t+0.05,90,0.5,"sawtooth",0.3,30);
+    }
+    else if(type==="hit"){ tone(ctx,t,95,0.14,"triangle",0.5,48); noiseBurst(ctx,t,0.06,300,0.3); }
+    else if(type==="draw"){ tone(ctx,t,1250,0.03,"triangle",0.07); }
+    else if(type==="beat"){ tone(ctx,t,58,0.1,"sine",0.45,46); tone(ctx,t+0.17,52,0.12,"sine",0.35,40); }
+    else if(type==="win"){ [523,659,784].forEach((f,i)=>tone(ctx,t+i*0.13,f,0.32,"triangle",0.22)); }
+    else if(type==="lose"){ tone(ctx,t,170,0.9,"sawtooth",0.2,55); }
+  }catch(e){}
+}
+function setHeartbeat(on){
+  if(on && !heartTimer){ heartTimer = setInterval(()=>sfx("beat"), 1100); }
+  else if(!on && heartTimer){ clearInterval(heartTimer); heartTimer = null; }
+}
+/* 和太鼓: 死地=単打 / 覚悟最大=連打 */
+function setTaiko(level){
+  if(level === taikoLevel) return;
+  taikoLevel = level;
+  if(taikoTimer){ clearInterval(taikoTimer); taikoTimer = null; }
+  if(level === 1){ taikoTimer = setInterval(()=>sfx("taiko"), 640); }
+  if(level === 2){ taikoTimer = setInterval(()=>sfx("taiko2"), 420); }
+}
+document.getElementById("muteBtn").onclick = function(){
+  muted = !muted;
+  this.textContent = muted ? "音:消" : "音:入";
+};
+document.addEventListener("pointerdown", ()=>{ const c=ac(); if(c && c.state==="suspended") c.resume(); }, {once:true});
+
+function showPile(which){
+  const pile = which === "deck" ? S.deck : S.discard;
+  const title = which === "deck" ? "山札の中身" : "捨て札の中身";
+  const counts = {};
+  for(const k of pile) counts[k] = (counts[k]||0) + 1;
+  const keys = Object.keys(counts).sort((a,b)=>CARDS[a].name.localeCompare(CARDS[b].name,"ja"));
+  let html = "";
+  for(const k of keys){
+    const c = CARDS[k];
+    html += '<div class="row"><span class="n">' + c.name + ' ×' + counts[k] + '</span>' +
+            '<span class="ct">気力' + effCost(c) + '</span>' +
+            '<span class="ds">' + c.desc + '</span></div>';
+  }
+  if(keys.length === 0) html = '<div class="row"><span class="ds">空である。</span></div>';
+  document.getElementById("pileTitle").textContent = title + "(" + pile.length + "枚)";
+  document.getElementById("pileList").innerHTML = html;
+  document.getElementById("pileModal").classList.add("show");
+}
+document.getElementById("deckBtn").onclick = ()=>showPile("deck");
+document.getElementById("discardBtn").onclick = ()=>showPile("discard");
+
+document.getElementById("endTurnBtn").onclick = endTurn;
+initGame();
+</script>
+</body>
+</html>

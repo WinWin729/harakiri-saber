@@ -611,7 +611,7 @@
 <div id="app">
   <header>
     <h1>ハラキリセイバー</h1>
-    <span class="sub">試作之伍 ─ 体幹と見切り</span>
+    <span class="sub">試作之伍・改 ─ 死地の位</span>
     <span id="turnLabel"></span>
     <button id="muteBtn">音:入</button>
   </header>
@@ -660,9 +660,9 @@
       <div id="kakugoLabel"><span>覚 悟</span><b id="kakugoVal"></b><span id="kakugoRankName"></span></div>
       <div class="kBar" id="kakugoBar">
         <div class="kFill" id="kakugoFill"></div>
-        <div class="kTick" style="left:20%"><span>決意</span></div>
-        <div class="kTick" style="left:50%"><span>捨身</span></div>
-        <div class="kTick" style="left:90%"><span>死人</span></div>
+        <div class="kTick" style="left:27%"><span>決意</span></div>
+        <div class="kTick" style="left:60%"><span>捨身</span></div>
+        <div class="kTick" style="left:99%"><span>死人=死地</span></div>
       </div>
     </div>
     <div class="energyRow">
@@ -760,7 +760,7 @@ const CARDS = {
 };
 
 const KAI_CARD = {key:"kaishaku", name:"《介錯一閃》", sword:null, kind:"kaishaku", cost:0, hits:1,
-                  desc:"流した血 ×1 のダメージを与える。一度きり。その場から、すべてを斬る。"};
+                  desc:"流した血 ×1 のダメージ。一度きり。死地でのみ抜ける。"};
 
 const DECK_LIST = ["zangeki","zangeki","ukenagashi","ukenagashi","chiburi","chiburi","chidome",
                    "nirenzashi","nirenzashi","chizome","chizome","shitotsu","shitotsu","ugachi",
@@ -789,11 +789,11 @@ const MAAI_MOD = {
 };
 
 const RANKS = [
-  {need:10, name:"決意", effect:"攻撃 +2"},
-  {need:25, name:"捨身", effect:"気力の最大 +1"},
-  {need:45, name:"死人", effect:"攻撃 +3・《介錯一閃》が手札に宿る"},
+  {need:8,  name:"決意", effect:"攻撃 +2"},
+  {need:18, name:"捨身", effect:"気力の最大 +1"},
 ];
-const KAKUGO_MAX = 50;
+/* 位三「死人」は条件位: 捨身+死地にいる間のみ。攻撃+3、《介錯一閃》が抜ける */
+const KAKUGO_MAX = 30;
 
 /* hits>1 は連射(合計でブロック・見切り判定) */
 const ENEMY_PATTERN = [
@@ -828,6 +828,7 @@ function initGame(){
     fury: 0, enraged: false,
     staggered50: false, staggered25: false, enemyStaggered: false,
     wonByKai: false,
+    shininSeen: false, shininEver: false,
     oath: null,
     deck: shuffle(DECK_LIST.slice()),
     hand: [], discard: [],
@@ -877,7 +878,8 @@ function shuffle(a){
   return a;
 }
 function oathAtk(){ return S.oath==="syura" ? 2 : 0; }
-function kakugoAtk(){ return (S.kakugoRank>=1?2:0) + (S.kakugoRank>=3?3:0); }
+function isShinin(){ return S.kakugoRank>=2 && S.maai===3; }
+function kakugoAtk(){ return (S.kakugoRank>=1?2:0) + (isShinin()?3:0); }
 function maaiAtk(){ return MAAI_MOD[S.sword][S.maai].atk; }
 function maaiDef(){ return MAAI_MOD[S.sword][S.maai].def; }
 function effCost(card){ return card.cost + (card.magic ? 0 : S.sekinen); }
@@ -1062,6 +1064,7 @@ function stepIn(n){
       sfx("step");
       vibrate(15);
       log((S.enemyStaggered ? "銃士は怯んでいる" : "銃士は装填中") + "──無傷で詰めた!「" + MAAI[S.maai].name + "」", "gold");
+      checkShinin();
       continue;
     }
     muzzleFlash();
@@ -1082,6 +1085,7 @@ function stepIn(n){
     } else {
       popDamage(document.getElementById("player"), "防", "heal");
     }
+    checkShinin();
   }
 }
 function stepBack(n){
@@ -1236,7 +1240,7 @@ function playCard(idx, pay){
 }
 
 function playKaishaku(){
-  if(busy || S.kaishakuUsed || S.kakugoRank < 3) return;
+  if(busy || S.kaishakuUsed || !isShinin()) return;
   const pay = canPay(KAI_CARD);
   if(!pay.ok){ log("気力も血も足りない。","sys"); return; }
   busy = true;
@@ -1396,12 +1400,27 @@ function checkKakugo(){
   while(S.kakugoRank < newRank){
     S.kakugoRank++;
     const r = RANKS[S.kakugoRank-1];
-    if(S.kakugoRank===2){ S.energyMax++; S.energy++; }
+    if(S.kakugoRank===2){
+      S.energyMax++; S.energy++;
+      log("次は死地だ──捨身の身で死地に立てば、死人の位が開く。", "sys");
+    }
     goldFlash();
     sfx("rankup");
     vibrate([30,40,30,40,80]);
-    showBanner("位 " + "一二三"[S.kakugoRank-1] + "「" + r.name + "」", "rankup");
+    showBanner("位 " + "一二"[S.kakugoRank-1] + "「" + r.name + "」", "rankup");
     log("覚悟が位に達した──「" + r.name + "」: " + r.effect + "(下位の恩恵もすべて乗る)", "gold");
+  }
+  checkShinin();
+}
+
+function checkShinin(){
+  if(isShinin() && !S.shininSeen){
+    S.shininSeen = true; S.shininEver = true;
+    goldFlash();
+    sfx("rankup");
+    vibrate([30,40,30,40,80]);
+    showBanner("位 三「死人」", "rankup");
+    log("捨身の身で死地に立った──死人の位が開く: 攻撃+3、《介錯一閃》が抜ける(死地にいる間のみ)。", "gold");
   }
 }
 
@@ -1443,7 +1462,7 @@ function earnTitle(win){
 
 function buildShareText(win, title){
   const oath = S.oath ? OATHS[S.oath].name : "";
-  const rank = S.kakugoRank > 0 ? "覚悟・" + RANKS[S.kakugoRank-1].name : "覚悟・無位";
+  const rank = S.shininEver ? "覚悟・死人" : (S.kakugoRank > 0 ? "覚悟・" + RANKS[S.kakugoRank-1].name : "覚悟・無位");
   const st = battleStats();
   if(win){
     return "【ハラキリセイバー】俺は血を" + S.bloodSpent + "流して辿り着いた。\n" +
@@ -1554,7 +1573,8 @@ function buildCardEl(c, opts){
     } else {
       const sid = c.sword || S.sword;
       const pm = Math.min(MAAI.length - 1, S.maai + Math.max(0, effStep(c)));
-      per = Math.max(0, effBase(c) + S.martyr + S.bless + S.mikiri + oathAtk() + kakugoAtk() + MAAI_MOD[sid][pm].atk);
+      const kak = (S.kakugoRank>=1?2:0) + ((S.kakugoRank>=2 && pm===3)?3:0);
+      per = Math.max(0, effBase(c) + S.martyr + S.bless + S.mikiri + oathAtk() + kak + MAAI_MOD[sid][pm].atk);
     }
     const hits = effHits(c);
     const cls2 = per > effBase(c) || (c.kind==="kaishaku" && S.sekinen>0) ? "up" : "";
@@ -1643,7 +1663,8 @@ function render(){
     S.tagiri>0 ? '<span class="tagiriBadge">滾り ' + S.tagiri + "</span>" : "";
   document.getElementById("kakugoVal").textContent = S.bloodSpent;
   document.getElementById("kakugoRankName").textContent =
-    S.kakugoRank>0 ? "位" + "一二三"[S.kakugoRank-1] + "「" + RANKS[S.kakugoRank-1].name + "」" : "無位";
+    isShinin() ? "位三「死人」(死地)" :
+    S.kakugoRank>0 ? "位" + "一二"[S.kakugoRank-1] + "「" + RANKS[S.kakugoRank-1].name + "」" : "無位";
   document.getElementById("kakugoFill").style.width =
     Math.min(100, S.bloodSpent / KAKUGO_MAX * 100) + "%";
   const br = document.getElementById("buffRow");
@@ -1655,7 +1676,7 @@ function render(){
   lastMartyr = S.martyr;
   if(S.mikiri>0) br.innerHTML += '<span class="buff mikiri">見切り 次の攻撃 +' + S.mikiri + "</span>";
   if(S.bless>0) br.innerHTML += '<span class="buff bless">祝福 攻撃 +' + S.bless + "(永続)</span>";
-  if(S.kakugoRank>0) br.innerHTML += '<span class="buff kakugo">覚悟 攻撃+' + kakugoAtk() + (S.kakugoRank>=2 ? "・気力+1" : "") + "</span>";
+  if(S.kakugoRank>0) br.innerHTML += '<span class="buff kakugo">覚悟 攻撃+' + kakugoAtk() + (S.kakugoRank>=2 ? "・気力+1" : "") + (isShinin() ? "・死人" : "") + "</span>";
   if(S.sekinen>0) br.innerHTML += '<span class="buff bless">積年 全数字 +' + S.sekinen + "</span>";
   if(S.tagiriMult>1) br.innerHTML += '<span class="buff" style="border:1px solid var(--tagiri);color:#6fd0b4;">渇き 滾り ×' + S.tagiriMult + "</span>";
   if(S.oath) br.innerHTML += '<span class="buff oath">' + OATHS[S.oath].name + "</span>";
@@ -1679,7 +1700,7 @@ function render(){
   }
   const hand = document.getElementById("hand");
   hand.innerHTML = "";
-  if(S.kakugoRank >= 3 && !S.kaishakuUsed){
+  if(isShinin() && !S.kaishakuUsed){
     const pay = canPay(KAI_CARD);
     const el = buildCardEl(KAI_CARD, {
       unplayable: !pay.ok,
@@ -1832,7 +1853,7 @@ function showBanner(text, mode){
 }
 function flyCard(idx){
   const hand = document.getElementById("hand");
-  const offset = (S.kakugoRank >= 3 && !S.kaishakuUsed) ? 1 : 0;
+  const offset = (isShinin() && !S.kaishakuUsed) ? 1 : 0;
   const el = hand.children[idx + offset];
   if(!el) return;
   const r = el.getBoundingClientRect();

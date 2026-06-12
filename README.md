@@ -6,8 +6,7 @@
 
 ## 遊ぶ
 
-GitHub Pages 公開後、ここに URL を記載:
-`https://<ユーザー名>.github.io/harakiri-saber/`
+`https://WinWin729.github.io/harakiri-saber/`
 
 ブラウザだけで動きます(スマホ可・音が出ます)。単一HTMLのプロトタイプです。
 
